@@ -12,7 +12,12 @@ const nextConfig = {
   // Configure for Replit environment - Next.js automatically allows all hosts in development
   // Configure hostname and port
   async rewrites() {
-    return []
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/api/:path*'
+      }
+    ]
   },
 }
 

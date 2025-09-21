@@ -357,16 +357,18 @@ function StatCard({
   title,
   value,
   color,
+  suffix = ""
 }: {
   title: string;
   value: number;
   color: string;
+  suffix?: string;
 }) {
   return (
     <Card>
       <CardContent className="p-6">
         <p className="text-sm text-gray-500">{title}</p>
-        <p className={`mt-2 text-3xl font-semibold ${color}`}>{value}</p>
+        <p className={`mt-2 text-3xl font-semibold ${color}`}>{value}{suffix}</p>
       </CardContent>
     </Card>
   );

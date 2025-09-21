@@ -44,14 +44,11 @@ export class AuthAPIClient {
   constructor() {
     // Use the correct backend URL for Replit environment
     if (typeof window !== 'undefined') {
-      // Browser environment - use the current domain with port 8000
-      const currentDomain = window.location.hostname;
-      // Always use HTTPS in Replit environment
-      this.baseUrl = `https://${currentDomain}:8000`;
+      // Browser environment - use relative paths for same domain
+      this.baseUrl = '/api';
     } else {
-      // Server-side rendering - use environment variable or fallback
-      const replitDomain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS;
-      this.baseUrl = replitDomain ? `https://${replitDomain}:8000` : 'http://localhost:8000';
+      // Server-side rendering - use localhost
+      this.baseUrl = 'http://localhost:8000/api';
     }
   }
 
