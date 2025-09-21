@@ -403,9 +403,294 @@ export default function PanelOperatoraPage() {
             </>
           )}
 
-          {activeTab !== "zadania" && (
+          {false && (
             <div className="text-center text-gray-500 pt-20">
               Funkcjonalność „{activeTab}” jest w trakcie tworzenia.
+            </div>
+          )}
+          {/* Statystyki Section */}
+          {activeTab === "statystyki" && (
+            <div className="space-y-6">
+              <h1 className="text-2xl font-bold text-gray-900">Statystyki</h1>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                  title="Sprawy w tym miesiącu"
+                  value={currentTasks.length}
+                  color="bg-blue-100 text-blue-800"
+                />
+                <StatCard
+                  title="Średni czas realizacji"
+                  value={2.5}
+                  color="bg-green-100 text-green-800"
+                  suffix=" dni"
+                />
+                <StatCard
+                  title="Zadowolenie klientów"
+                  value={98}
+                  color="bg-purple-100 text-purple-800"
+                  suffix="%"
+                />
+                <StatCard
+                  title="Ukończone sprawy"
+                  value={currentTasks.filter(t => t.status === "completed").length}
+                  color="bg-green-100 text-green-800"
+                />
+              </div>
+
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Wydajność w czasie</h3>
+                  <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+                    <div className="text-center text-gray-500">
+                      <BarChart3 className="h-12 w-12 mx-auto mb-2" />
+                      <p>Wykres wydajności</p>
+                      <p className="text-sm">(będzie dostępny wkrótce)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Klienci Section */}
+          {activeTab === "klienci" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900">Klienci</h1>
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Dodaj klienta
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {[...new Set(currentTasks.map(t => t.client))].map((client, index) => {
+                  const clientCases = currentTasks.filter(t => t.client === client);
+                  const activeCases = clientCases.filter(t => t.status !== "completed").length;
+                  
+                  return (
+                    <Card key={index} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{client}</h3>
+                              <p className="text-sm text-gray-500">
+                                {clientCases.length} spraw • {activeCases} aktywnych
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm">
+                              <Mail className="mr-2 h-4 w-4" />
+                              Email
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Wiadomość
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Szablony Section */}
+          {activeTab === "szablony" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900">Szablony odpowiedzi</h1>
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nowy szablon
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[
+                  {
+                    title: "Potwierdzenie otrzymania dokumentów",
+                    description: "Standardowa odpowiedź po otrzymaniu dokumentów od klienta",
+                    uses: 45,
+                    category: "Dokumenty"
+                  },
+                  {
+                    title: "Prośba o dodatkowe informacje",
+                    description: "Szablon do prośby o uzupełnienie danych",
+                    uses: 32,
+                    category: "Komunikacja"
+                  },
+                  {
+                    title: "Zakończenie analizy",
+                    description: "Powiadomienie o zakończeniu analizy dokumentów",
+                    uses: 28,
+                    category: "Analiza"
+                  },
+                  {
+                    title: "Harmonogram płatności",
+                    description: "Informacje o płatnościach i terminach",
+                    uses: 15,
+                    category: "Płatności"
+                  }
+                ].map((template, index) => (
+                  <Card key={index} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-semibold text-gray-900">{template.title}</h3>
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                          {template.category}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">{template.description}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">Użyty {template.uses} razy</span>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">
+                            <FileEdit className="mr-2 h-4 w-4" />
+                            Edytuj
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Ustawienia Section */}
+          {activeTab === "ustawienia" && (
+            <div className="space-y-6">
+              <h1 className="text-2xl font-bold text-gray-900">Ustawienia</h1>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Powiadomienia</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Nowe sprawy</p>
+                          <p className="text-sm text-gray-500">Powiadomienia o nowych sprawach</p>
+                        </div>
+                        <input type="checkbox" defaultChecked className="rounded" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Zbliżające się terminy</p>
+                          <p className="text-sm text-gray-500">Alerty o terminach</p>
+                        </div>
+                        <input type="checkbox" defaultChecked className="rounded" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Wiadomości od klientów</p>
+                          <p className="text-sm text-gray-500">Powiadomienia o nowych wiadomościach</p>
+                        </div>
+                        <input type="checkbox" defaultChecked className="rounded" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Preferencje pracy</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Maksymalna liczba aktywnych spraw
+                        </label>
+                        <input 
+                          type="number" 
+                          defaultValue={10} 
+                          className="w-full border rounded-md px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Preferowany czas pracy
+                        </label>
+                        <select className="w-full border rounded-md px-3 py-2">
+                          <option>8:00 - 16:00</option>
+                          <option>9:00 - 17:00</option>
+                          <option>10:00 - 18:00</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Automatyczne przypisywanie spraw
+                        </label>
+                        <input type="checkbox" defaultChecked className="rounded" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Profil</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Imię i nazwisko</label>
+                        <input 
+                          type="text" 
+                          defaultValue={user?.name || ""} 
+                          className="w-full border rounded-md px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Email</label>
+                        <input 
+                          type="email" 
+                          defaultValue={user?.email || ""} 
+                          className="w-full border rounded-md px-3 py-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Telefon</label>
+                        <input 
+                          type="tel" 
+                          placeholder="+48 123 456 789" 
+                          className="w-full border rounded-md px-3 py-2"
+                        />
+                      </div>
+                      <Button className="w-full">
+                        <Save className="mr-2 h-4 w-4" />
+                        Zapisz zmiany
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Bezpieczeństwo</h3>
+                    <div className="space-y-4">
+                      <Button variant="outline" className="w-full">
+                        Zmień hasło
+                      </Button>
+                      <Button variant="outline" className="w-full">
+                        Włącz dwuskładnikowe uwierzytelnianie
+                      </Button>
+                      <Button variant="outline" className="w-full">
+                        Wyloguj ze wszystkich urządzeń
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           )}
         </main>
