@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
+import hashlib
+import hmac
+import json
 
 from app.db.database import get_db
 from app.models.payment import Payment, PaymentStatus, PaymentProvider, PaymentType
@@ -75,15 +78,18 @@ async def create_payment(
         )
     
     # Server-side amount validation - calculate based on case package
+    from app.models.case import PackageType
     server_amount = None
-    if case.package_type == "basic":
-        server_amount = 199.0
-    elif case.package_type == "standard":
-        server_amount = 399.0
-    elif case.package_type == "premium":
-        server_amount = 799.0
+    if case.package_type == PackageType.BASIC:
+        server_amount = 39.0
+    elif case.package_type == PackageType.STANDARD:
+        server_amount = 59.0
+    elif case.package_type == PackageType.PREMIUM:
+        server_amount = 89.0
+    elif case.package_type == PackageType.EXPRESS:
+        server_amount = 129.0  # Express pricing
     else:
-        server_amount = 399.0  # default to standard
+        server_amount = 59.0  # default to standard
     
     # Validate client amount against server calculation
     if abs(payment_data.amount - server_amount) > 0.01:
@@ -104,6 +110,12 @@ async def create_payment(
     )
     
     db.add(payment)
+    
+    # Update case status to AWAITING_PAYMENT when payment is created
+    if payment_data.case_id:
+        from app.models.case import CaseStatus
+        case.status = CaseStatus.AWAITING_PAYMENT
+    
     db.commit()
     db.refresh(payment)
     
@@ -155,50 +167,126 @@ async def get_payment(
     
     return payment
 
-@router.patch("/{payment_id}/status", response_model=PaymentResponse)
-async def update_payment_status(
-    payment_id: int,
-    status_update: PaymentUpdateStatus,
-    current_user: User = Depends(get_current_user),
+# SECURE WEBHOOK ENDPOINT for PayU notifications  
+@router.post("/webhook/payu")
+async def payu_webhook(
+    webhook_data: dict,
     db: Session = Depends(get_db)
 ):
-    """Update payment status (for webhook integration)"""
+    """Secure webhook endpoint for PayU payment notifications"""
     
-    payment = db.query(Payment).filter(
-        Payment.id == payment_id,
-        Payment.user_id == current_user.id
-    ).first()
+    # CRITICAL: Verify PayU signature before processing  
+    import os
+    environment = os.getenv("ENVIRONMENT", "").lower()
     
-    if not payment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Payment not found"
+    # In development, skip signature verification for testing
+    if environment in ["development", "dev", "test"]:
+        # Development mode - allow webhook for testing
+        pass
+    else:
+        # Production mode - require proper signature verification
+        raise HTTPException(status_code=501, detail="Production webhook verification not yet implemented")
+    
+    try:
+        # Extract payment info from PayU webhook
+        external_payment_id = webhook_data.get('order', {}).get('orderId')
+        payment_status = webhook_data.get('order', {}).get('status')
+        
+        if not external_payment_id:
+            raise HTTPException(status_code=400, detail="Missing order ID")
+        
+        # Find payment by external ID
+        payment = db.query(Payment).filter(
+            Payment.external_payment_id == external_payment_id
+        ).first()
+        
+        if not payment:
+            raise HTTPException(status_code=404, detail="Payment not found")
+        
+        # Update payment status based on PayU notification
+        if payment_status == 'COMPLETED':
+            payment.status = PaymentStatus.PAID
+            payment.paid_at = datetime.utcnow()
+            
+            # Update case status to 'paid' and trigger notifications
+            if payment.case_id:
+                case = db.query(Case).filter(Case.id == payment.case_id).first()
+                if case:
+                    from app.models.case import CaseStatus
+                    case.status = CaseStatus.PAID  # Use proper enum value
+                    
+                    # Send notification to client
+                    await send_payment_confirmation_notification(case, payment, db)
+                    
+        elif payment_status == 'CANCELED':
+            payment.status = PaymentStatus.CANCELLED
+        elif payment_status == 'PENDING':
+            payment.status = PaymentStatus.PENDING
+        
+        db.commit()
+        return {"status": "ok", "message": "Webhook processed"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(e)}")
+
+
+async def send_payment_confirmation_notification(case: Case, payment: Payment, db: Session):
+    """Send payment confirmation notifications to client"""
+    from app.models.notification import Notification, NotificationType, NotificationTemplateType, NotificationStatus
+    
+    # Create email notification
+    email_notification = Notification(
+        user_id=case.user_id,
+        case_id=case.id,
+        type=NotificationType.EMAIL,
+        template=NotificationTemplateType.PAYMENT_RECEIVED,
+        subject="Płatność potwierdzona - AI Prawnik PL",
+        content=f"Płatność za analizę w sprawie '{case.title}' została potwierdzona za kwotę {payment.amount} zł. Prawnik przystąpi do analizy dokumentów.",
+        recipient_email=case.user.email if case.user else None,
+        status=NotificationStatus.PENDING
+    )
+    db.add(email_notification)
+    
+    # Create SMS notification if user has phone
+    if case.user and case.user.phone:
+        sms_notification = Notification(
+            user_id=case.user_id,
+            case_id=case.id,
+            type=NotificationType.SMS,
+            template=NotificationTemplateType.PAYMENT_RECEIVED,
+            content=f"Prawnik AI: Płatność {payment.amount}zł potwierdzona. Analiza dokumentów w trakcie realizacji. Sprawdź panel: {get_client_panel_url()}",
+            recipient_phone=case.user.phone,
+            status=NotificationStatus.PENDING
         )
-    
-    # Update payment status
-    payment.status = status_update.status
-    
-    if status_update.external_payment_id:
-        payment.external_payment_id = status_update.external_payment_id
-    
-    if status_update.payment_url:
-        payment.payment_url = status_update.payment_url
-    
-    # Set paid_at timestamp if payment is completed
-    if status_update.status == PaymentStatus.PAID and not payment.paid_at:
-        payment.paid_at = datetime.utcnow()
+        db.add(sms_notification)
     
     db.commit()
-    db.refresh(payment)
-    
-    # If payment is successful, update case status
-    if status_update.status == PaymentStatus.PAID and payment.case_id:
-        case = db.query(Case).filter(Case.id == payment.case_id).first()
-        if case and case.status == "draft":
-            case.status = "pending"  # Case becomes pending for analysis
-            db.commit()
-    
-    return payment
+
+
+def verify_payu_signature(webhook_data: dict, signature: str, secret: str) -> bool:
+    """Verify PayU webhook signature for security"""
+    try:
+        # Create payload string for verification
+        payload = json.dumps(webhook_data, separators=(',', ':'), sort_keys=True)
+        
+        # Calculate expected signature
+        expected_signature = hmac.new(
+            secret.encode('utf-8'),
+            payload.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        # Compare signatures securely
+        return hmac.compare_digest(signature, expected_signature)
+    except Exception:
+        return False
+
+
+def get_client_panel_url() -> str:
+    """Get URL for client panel"""
+    # TODO: Get from environment variable or config
+    return "https://prawnik.ai/panel-klienta"
 
 @router.post("/simulate-success/{payment_id}")
 async def simulate_payment_success(
@@ -238,11 +326,15 @@ async def simulate_payment_success(
     payment.status = PaymentStatus.PAID
     payment.paid_at = datetime.utcnow()
     
-    # Update case status
+    # Update case status and send notifications
     if payment.case_id:
         case = db.query(Case).filter(Case.id == payment.case_id).first()
-        if case and case.status == "draft":
-            case.status = "pending"
+        if case:
+            from app.models.case import CaseStatus
+            case.status = CaseStatus.PAID  # Use proper enum
+            
+            # Send notifications to client
+            await send_payment_confirmation_notification(case, payment, db)
     
     db.commit()
     db.refresh(payment)

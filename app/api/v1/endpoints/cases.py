@@ -80,18 +80,31 @@ async def create_case(
                     'extension': file_extension
                 })
         
+        # Convert string package_type to enum
+        from app.models.case import PackageType, CaseStatus
+        package_enum = None
+        if package_type:
+            package_type_lower = package_type.lower()
+            if package_type_lower == "basic":
+                package_enum = PackageType.BASIC
+            elif package_type_lower == "standard":
+                package_enum = PackageType.STANDARD
+            elif package_type_lower == "premium":
+                package_enum = PackageType.PREMIUM
+            elif package_type_lower == "express":
+                package_enum = PackageType.EXPRESS
+            else:
+                package_enum = PackageType.STANDARD  # default
+
         # Now create case and handle file uploads in single transaction
-        case_data = CaseCreate(
+        db_case = Case(
             title=title,
             description=description,
             client_notes=client_notes,
-            package_type=package_type,
-            package_price=package_price
-        )
-        
-        db_case = Case(
-            **case_data.dict(),
-            user_id=current_user.id
+            package_type=package_enum,
+            package_price=package_price,
+            user_id=current_user.id,
+            status=CaseStatus.NEW
         )
         db.add(db_case)
         db.flush()  # Get case ID without committing

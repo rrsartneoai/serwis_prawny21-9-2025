@@ -86,7 +86,7 @@ export interface CaseStatusUpdate {
 }
 
 class OperatorAPI {
-  private baseUrl = '/api/v1/operator';
+  private baseUrl = '/operator';
 
   async getCases(statusFilter?: string): Promise<{ cases: OperatorCase[] | null; error: string | null }> {
     try {
