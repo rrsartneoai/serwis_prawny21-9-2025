@@ -1,0 +1,128 @@
+przejrzyj specyfikacje pomin osiagniete i zaimplementowane funkcjonalnosci  i  kontynuuj implementacje brakujacych elementow
+=================================================================
+
+
+- logowanie uzytkownika
+- wgranie pisma + zapytania
+- logowanie administratora oraz operatora profesjonalne panele
+- udzielenie odpowiedzi na zapytania
+- platnosci PAYU
+- integracja fakturownia
+- dodatkowe powiadomienia sms
+- komunikacja mailowa
+- implementacja Google tags w celu implementacji meta.
+ Specyfikacja techniczna - definicje
+ 1. Celem jest stworzenie serwisu internetowego do obsługi prawnej użytkowników (mogą być osoby 
+f
+ izyczne lub prawne).
+ 2. Przez obsługę rozumiemy analizę pism otrzymanych przez klientów (z sądów, od komorników, od 
+wierzycieli, od kontrahenta - wszelkie pisma, które mogą być przedmiotem analizy (w pierwszym 
+kroku), a drugim krokiem jest przygotowanie dla klienta pisma stanowiącego reakcję / odpowiedź 
+na pismo które otrzymał.
+ 3. Pierwszym krokiem jest zawsze analiza pisma. Dopiero z analizy możemy przejść do kroku 
+drugiego, tj. sporządzenia pisma. Z analizy wyjdzie jakie pisma możemy klientowi zaproponować 
+(może być też tak, że nie będzie opcji na zaproponowanie czegoś).
+ 4. Klient ładując pismo do serwisu powinien mieć okienko z miejscem na wpisanie kontekstu, czego 
+od nas oczekuje, czy się z pismem zgadza / nie zgadza, czemu się zgadza czy nie zgadza? Trzeba 
+_Specyfikacja AI Prawnik PL  | 2 - Specyfikacja aplikacji PrawoAsystent AI  | 3
+ umieścić podpowiedzi żeby wydobyć od klienta jak najwięcej info. Dobrą funkcją będzie to żeby 
+mógł to powiedzieć.
+ 5. Po załadowaniu pisma wraz z opisem (może być bez opisu), klient przechodzi do okienka w którym 
+musi dokonać płatności. Powinien mieć kilka opcji do wyboru (choćby pozornych), np. analiza 
+lepsza / gorsza, szybciej wykonana / później, pakiet analiz. Ograniczone czasowo promocje.
+ 6. Po płatności dostaje powiadomienie o przystąpieniu do realizacji i, że powiadomienie, że analiza 
+jest gotowa otrzyma na telefon / mail.
+ 7. Rejestracja / logowanie na serwisie powinno się odbywać przez: social media / google, albo przez 
+nr telefonu i sms autoryzujący logowanie / adres email i mail z kodem autoryzującym logowanie.
+ 8. Konto użytkownika musi zawierać historię jego spraw.
+ a. Użytkownik spraw może mieć kilka.
+ b. Niech ma możliwość samodzielnego nazywania spraw.
+ c. Każda sprawa zaczyna się od pierwszego pisma wgranego przez klienta,
+ i. potem wygenerowanej przez nas analizy,
+ ii. następnie wygenerowanych przez nas pism, kupionych przez klienta
+ iii. . Kolejnym krokiem może być powrót klienta z odpowiedzią otrzymaną z sądu czy od 
+komornika na wygenerowane przez nas pismo
+ 1. . Ważne żeby klient mógł je dodać do danej sprawy
+ a. a operator mógł w oparciu o historię sprawy, wygenerować analizę
+ b. a potem sprzedać pismo.
+ 2. Jest to więc podstrona stanowiąca konto klienta.
+ a. Tu ma być opcja wgrania nowego pisma żeby zrobić analizę
+ i. (nie sprzedajemy pisma bez wcześniejszej analizy
+ 1. z której dopiero wychodzi jakie pisma możemy 
+zaproponować).
+ 3. Na podstronie klienta dobrze żeby wraz z historią akcji i pism, dostępne były 
+dalej pisma, których jeszcze nie kupił po danej analizie.
+ 9. Klient musi mieć opcję wyświetlenia pisma / analizy
+ Po opłaceniu analizy / pisma,
+ a. zadanie trafia do operatora.
+ i. Zarówno przy piśmie jak i analizie, klient ma mieć przestrzeń do wpisania swoich 
+komentarzy.
+ 11. Możliwość dla klienta wgrywania pism
+ a. jako zdjęcia zrobione telefonem
+ b. albo skanów w formie pdf.
+ 12. Ograniczenia do wgrywanych pism.
+ a. ilościowe
+ b. i wielkościowe
+ 13. Serwis zawiera
+ a. część operatorską,
+ i. gdzie operator ściąga to co wgrał klient,
+ ii. przetwarza to na naszych narzędzi
+ iii. i wstawia klientowi gotową analizę / pismo.
+ 1. Klient w momencie wstawienia gotowca przez operatora, dostaje o tym 
+powiadomienie.
+ 14. Razem z krokiem wykonania analizy,
+ a. operator "wystawia" klientowi pisma, których jest możliwość sporządzenia.
+ b. W analizie wyjdzie jakie to są możliwości.
+ c. Powinien więc mieć podgląd analizy
+ d. oraz obok niej czy pod nią guziki wystawione przez operatora
+ i. np. "Skarga na czynność komornika - 59 zł" - jak w obrazku wyżej.
+ e. Jeśli pism będzie kilka to z każdym kolejnym cena spada.
+ 15. Przy zakupie pism
+ a. zostają one wysłane / udostępniane klientowi
+ i. wraz z instrukcją co należy zrobić
+ 1. (np. nadać na poczcie przesyłką poleconą).
+ 2. Do przemyślenia opcja wysyłania poprzez epuap.
+ 16. Elementy marketingowe do przemyślenia.
+ a. Opcja bazowa to krótka sekcja "o nas".
+ 17. Opcja do przemyślenia
+ a. żeby zarówno analizę jak i pismo udostępniać w ⅓  czy jakiejś innej części
+ i. a żeby odkrycie go do końca było już płatne.
+ 1. Klient wtedy widzi, że działamy naprawdę i nie ma wątpliwości że straci kasę.
+ 18. operator powinien mieć gotowe “guziki” żeby się komunikować z klientem.
+ a. Np. jeśli klient wyśle niewyraźne skany
+ i. to operator klikając guzik “niewyraźne skany”
+ 1. wyzwoli do klienta ładny komunikat żeby załadował raz jeszcze
+
+ Kwestie prawne
+ 1. Regulamin
+ 2. Rodo
+ 3. Odpowiedzialność za wrzucane treści
+ 4. Ograniczenie odpowiedzialności
+ Strona główna
+ a. W miejscu sprawdź firmę, może być “Zamów analizę”
+ b. Kafelki na dole to idealne dla nas do wymienienia przykładów spraw w których klienci mogą 
+uzyskać pomoc.
+ c. Obrazek po prawej z 49 zł to idealne, że wstawić obrazek przykładowego pisma.
+ d. Cała strona to idealna inspiracja  Inspiracje https://sprawdzaj.pl
+
+
+
+================================================================
+
+
+Organize data storage for cases, documents
+Add sign-in options: Google, SMS, email
+Create user case management with history
+Add document upload with size limits
+Create document analysis with comments
+Connect payments with pricing, promotions
+Add operator panel for document analysis
+Create admin panel for user management
+Add SMS and email notifications
+Connect to Fakturownia for invoices
+Add Google Tags for ads
+Create preview, sell legal writings
+Partial document preview after payment
+Create operator-client chat with templates
+Improve main page based on example
+Add legal terms: rules, privacy
