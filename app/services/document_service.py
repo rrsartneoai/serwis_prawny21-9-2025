@@ -87,12 +87,13 @@ class DocumentService:
         
         document = Document(
             case_id=case_id,
-            filename=file.filename,
-            content_type=file.content_type or 'application/octet-stream',
-            size=file_size,
+            filename=str(uuid.uuid4()),
+            original_filename=file.filename,
+            file_type=file.content_type or 'application/octet-stream',
+            file_size=file_size,
             file_path=file_path,
             document_type=self.get_document_type(file.filename),
-            processing_status="uploaded"
+            is_processed=False
         )
         
         self.db.add(document)
@@ -144,7 +145,7 @@ class DocumentService:
         # Check if user owns the case
         case = self.db.query(Case).filter(
             Case.id == document.case_id, 
-            Case.created_by_user_id == user_id
+            Case.user_id == user_id
         ).first()
         if not case:
             return False

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.core.auth import get_current_user
+from app.api.v1.endpoints.auth import get_verified_user
 from app.models.user import User
 from app.models.case import Case
 from app.services.document_service import DocumentService
@@ -16,7 +16,7 @@ async def upload_documents(
     case_id: int,
     files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_verified_user)
 ):
     """
     Upload documents for a specific case.
@@ -30,7 +30,7 @@ async def upload_documents(
     # Verify case belongs to user
     case = db.query(Case).filter(
         Case.id == case_id, 
-        Case.created_by_user_id == current_user.id
+        Case.user_id == current_user.id
     ).first()
     
     if not case:
@@ -56,7 +56,7 @@ async def upload_documents(
 async def get_case_documents(
     case_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_verified_user)
 ):
     """
     Pobierz wszystkie dokumenty dla danej sprawy
@@ -68,7 +68,7 @@ async def get_case_documents(
         raise HTTPException(status_code=404, detail="Sprawa nie została znaleziona")
     
     # Check permissions
-    if case.created_by_user_id != current_user.id and current_user.role.name not in ['OPERATOR', 'ADMIN']:
+    if case.user_id != current_user.id and current_user.role not in ['OPERATOR', 'ADMIN']:
         raise HTTPException(
             status_code=403, 
             detail="Nie masz uprawnień do przeglądania dokumentów tej sprawy"
@@ -82,7 +82,7 @@ async def get_case_documents(
 async def delete_document(
     document_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_verified_user)
 ):
     """
     Usuń dokument (dostępne tylko dla właściciela sprawy)

@@ -11,8 +11,9 @@ class DocumentType(str, Enum):
 
 class DocumentBase(BaseModel):
     filename: str
-    content_type: str
-    size: int
+    original_filename: str
+    file_type: str
+    file_size: int
     document_type: DocumentType
 
 class DocumentCreate(DocumentBase):
@@ -23,9 +24,8 @@ class DocumentResponse(DocumentBase):
     case_id: int
     file_path: str
     ocr_text: Optional[str] = None
-    processing_status: str
-    created_at: datetime
-    updated_at: datetime
+    is_processed: bool
+    uploaded_at: datetime
 
     class Config:
         from_attributes = True
