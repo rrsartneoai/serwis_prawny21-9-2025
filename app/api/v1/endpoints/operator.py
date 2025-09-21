@@ -8,6 +8,7 @@ from app.db.database import get_db
 from app.models.case import Case, Analysis, LegalDocument, CaseStatus
 from app.models.user import User, UserRole
 from app.api.v1.endpoints.auth import get_verified_user
+from app.services.ai_document_analysis_service import create_ai_document_service
 
 router = APIRouter()
 
@@ -362,4 +363,68 @@ async def send_client_message(
         "message": "Message sent successfully",
         "case_id": case_id,
         "sent_at": datetime.utcnow().isoformat()
+    }
+
+
+@router.post("/cases/{case_id}/analyze-ai", response_model=AnalysisResponse)  
+def trigger_ai_analysis(
+    case_id: int,
+    operator: User = Depends(require_operator),
+    db: Session = Depends(get_db)
+):
+    """Automatycznie wygeneruj analizę dokumentów sprawy za pomocą AI"""
+    
+    # Sprawdź czy sprawa istnieje
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Case not found"
+        )
+    
+    # Stwórz service AI i wygeneruj analizę
+    ai_service = create_ai_document_service(db)
+    
+    try:
+        # Service method is synchronous, don't await
+        analysis = ai_service.analyze_case_documents(case_id, operator.id)
+        
+        if not analysis:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unable to generate analysis - no documents found or processing failed"
+            )
+        
+        return analysis
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate AI analysis: {str(e)}"
+        )
+
+
+@router.get("/cases/{case_id}/documents-summary")
+def get_case_documents_summary(
+    case_id: int,
+    operator: User = Depends(require_operator),
+    db: Session = Depends(get_db)
+):
+    """Pobierz podsumowanie dokumentów sprawy"""
+    
+    # Sprawdź czy sprawa istnieje
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Case not found"
+        )
+    
+    ai_service = create_ai_document_service(db)
+    summary = ai_service.get_case_documents_summary(case_id)
+    
+    return {
+        "case_id": case_id,
+        "summary": summary,
+        "generated_at": datetime.utcnow().isoformat()
     }

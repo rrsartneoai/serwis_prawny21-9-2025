@@ -217,6 +217,65 @@ class OperatorAPI {
       };
     }
   }
+
+  // AI Document Analysis Methods
+  async triggerAIAnalysis(caseId: number): Promise<{ success: boolean; analysis?: OperatorAnalysis; error: string | null }> {
+    try {
+      const analysis = await authAPI.makeRequest<OperatorAnalysis>(
+        'POST',
+        `${this.baseUrl}/cases/${caseId}/analyze-ai`,
+        undefined,
+        true
+      );
+      return { success: true, analysis, error: null };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to generate AI analysis'
+      };
+    }
+  }
+
+  async getDocumentsSummary(caseId: number): Promise<{
+    success: boolean;
+    summary?: {
+      case_id: number;
+      summary: {
+        total_documents: number;
+        processed_documents: number;
+        document_types: Record<string, number>;
+        total_text_length: number;
+        has_ocr_text: number;
+      };
+      generated_at: string;
+    };
+    error: string | null;
+  }> {
+    try {
+      const summary = await authAPI.makeRequest<{
+        case_id: number;
+        summary: {
+          total_documents: number;
+          processed_documents: number;
+          document_types: Record<string, number>;
+          total_text_length: number;
+          has_ocr_text: number;
+        };
+        generated_at: string;
+      }>(
+        'GET',
+        `${this.baseUrl}/cases/${caseId}/documents-summary`,
+        undefined,
+        true
+      );
+      return { success: true, summary, error: null };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get documents summary'
+      };
+    }
+  }
 }
 
 export const operatorAPI = new OperatorAPI();

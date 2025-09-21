@@ -1,0 +1,19 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "## Opis projektu",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ai-sdk/google": "^2.0.14",
+    "@google-ai/generativelanguage": "^3.4.0",
+    "ai": "^5.0.48",
+    "pdf-parse": "^1.1.1",
+    "tesseract.js": "^6.0.1"
+  }
+}

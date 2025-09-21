@@ -109,6 +109,8 @@ export default function OperatorCaseDetailPage() {
   const [newDocumentPrice, setNewDocumentPrice] = useState("");
   const [newDocumentInstructions, setNewDocumentInstructions] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [documentsummary, setDocumentSummary] = useState<any>(null);
 
   // Redirect if not authenticated or not operator
   useEffect(() => {
@@ -125,6 +127,13 @@ export default function OperatorCaseDetailPage() {
       loadCaseDetail();
     }
   }, [caseId, isAuthenticated, user]);
+
+  // Load documents summary when case is loaded
+  useEffect(() => {
+    if (caseDetail) {
+      loadDocumentsSummary();
+    }
+  }, [caseDetail]);
 
   const loadCaseDetail = async () => {
     setIsLoading(true);
@@ -146,6 +155,54 @@ export default function OperatorCaseDetailPage() {
       }
     }
     setIsLoading(false);
+  };
+
+  const handleGenerateAIAnalysis = async () => {
+    if (!caseDetail) return;
+    
+    setIsGeneratingAI(true);
+    try {
+      const result = await operatorAPI.triggerAIAnalysis(caseDetail.id);
+      
+      if (result.success && result.analysis) {
+        toast({
+          title: "Analiza AI wygenerowana!",
+          description: "Automatyczna analiza została utworzona pomyślnie.",
+        });
+        
+        // Update the form with AI-generated content
+        setAnalysisContent(result.analysis.content);
+        setAnalysisSummary(result.analysis.summary || "");
+        setAnalysisRecommendations(result.analysis.recommendations || "");
+        
+        // Reload case data to get updated analysis
+        await loadCaseDetail();
+      } else {
+        throw new Error(result.error || "Nie udało się wygenerować analizy");
+      }
+    } catch (error) {
+      toast({
+        title: "Błąd",
+        description: error instanceof Error ? error.message : "Nie udało się wygenerować analizy AI",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  const loadDocumentsSummary = async () => {
+    if (!caseDetail) return;
+    
+    try {
+      const result = await operatorAPI.getDocumentsSummary(caseDetail.id);
+      
+      if (result.success && result.summary) {
+        setDocumentSummary(result.summary.summary);
+      }
+    } catch (error) {
+      console.error("Failed to load documents summary:", error);
+    }
   };
 
   const handleSaveAnalysis = async () => {
@@ -424,12 +481,71 @@ export default function OperatorCaseDetailPage() {
             </TabsContent>
 
             <TabsContent value="analysis" className="space-y-6">
+              {/* Documents Summary Card */}
+              {documentsummary && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <FileText className="mr-2 h-5 w-5" />
+                      Podsumowanie dokumentów
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-2xl font-bold text-blue-600">{documentsummary.total_documents}</p>
+                        <p className="text-sm text-blue-800">Dokumentów</p>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <p className="text-2xl font-bold text-green-600">{documentsummary.processed_documents}</p>
+                        <p className="text-sm text-green-800">Przetworzonych</p>
+                      </div>
+                      <div className="bg-purple-50 p-4 rounded-lg">
+                        <p className="text-2xl font-bold text-purple-600">{documentsummary.has_ocr_text}</p>
+                        <p className="text-sm text-purple-800">Z tekstem</p>
+                      </div>
+                      <div className="bg-orange-50 p-4 rounded-lg">
+                        <p className="text-2xl font-bold text-orange-600">
+                          {Math.round(documentsummary.total_text_length / 1000)}k
+                        </p>
+                        <p className="text-sm text-orange-800">Znaków</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardHeader>
                   <CardTitle>Tworzenie analizy</CardTitle>
                   <p className="text-gray-600">Przygotuj szczegółową analizę dokumentów klienta</p>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* AI Analysis Button */}
+                  <div className="border-b pb-4">
+                    <Button
+                      onClick={handleGenerateAIAnalysis}
+                      disabled={isGeneratingAI || !caseDetail?.documents.length}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                    >
+                      {isGeneratingAI ? (
+                        <>
+                          <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                          Generowanie analizy AI...
+                        </>
+                      ) : (
+                        <>
+                          <span className="mr-2">🤖</span>
+                          Wygeneruj analizę AI
+                        </>
+                      )}
+                    </Button>
+                    {!caseDetail?.documents.length && (
+                      <p className="text-sm text-gray-500 mt-2 text-center">
+                        Brak dokumentów do analizy
+                      </p>
+                    )}
+                  </div>
                   <div>
                     <Label htmlFor="analysis-summary">Streszczenie analizy</Label>
                     <Textarea

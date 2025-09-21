@@ -32,7 +32,7 @@ export async function generateLegalResponse(
     model,
     system: systemPrompt,
     prompt: query.question,
-    maxTokens: 1000,
+    maxCompletionTokens: 1000,
   });
 
   const disclaimer =
@@ -62,6 +62,6 @@ export function streamLegalResponse(query: LegalQuery) {
     model,
     system: systemPrompt,
     prompt: query.question,
-    maxTokens: 1000,
+    maxCompletionTokens: 1000,
   });
 }

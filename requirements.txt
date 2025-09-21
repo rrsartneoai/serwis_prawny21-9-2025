@@ -28,3 +28,8 @@ python-jose[cryptography]==3.3.0
 SQLAlchemy==2.0.30
 twilio
 uvicorn==0.29.0
+google-generativeai
+opencv-python
+pillow
+pymupdf
+pytesseract
