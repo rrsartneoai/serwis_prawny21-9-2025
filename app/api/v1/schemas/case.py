@@ -13,7 +13,6 @@ class DocumentCreate(DocumentBase):
 
 class DocumentInDB(DocumentBase):
     id: int
-    file_path: str
     uploaded_at: datetime
     case_id: int
 

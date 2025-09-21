@@ -18,7 +18,7 @@ router = APIRouter()
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-@router.post("/", response_model=CaseInDB, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CaseInDB, status_code=status.HTTP_201_CREATED)
 async def create_case(
     title: str = Form(...),
     description: str = Form(None),
@@ -31,73 +31,113 @@ async def create_case(
 ):
     """Create a new case with optional file uploads"""
     
-    # Create the case
-    case_data = CaseCreate(
-        title=title,
-        description=description,
-        client_notes=client_notes,
-        package_type=package_type,
-        package_price=package_price
-    )
+    # Check file count limit before processing
+    if len(files) > 5:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum 5 files allowed per case"
+        )
     
-    db_case = Case(
-        **case_data.dict(),
-        user_id=current_user.id
-    )
-    db.add(db_case)
-    db.commit()
-    db.refresh(db_case)
+    # Prepare all data and validate files before any database operations
+    uploaded_files_to_cleanup = []
+    validated_files = []
     
-    # Handle file uploads
-    uploaded_documents = []
-    for file in files:
-        if file.filename and file.size > 0:
-            # Validate file type
-            allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
-            if file.content_type not in allowed_types:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"File type {file.content_type} not allowed. Allowed types: PDF, JPG, PNG"
-                )
-            
-            # Validate file size (10MB max)
-            if file.size > 10 * 1024 * 1024:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"File {file.filename} is too large. Maximum size is 10MB"
-                )
-            
+    try:
+        # Pre-validate all files first
+        for file in files:
+            if file.filename:
+                # Read file contents first to get actual size
+                contents = await file.read()
+                file_size = len(contents)
+                
+                if file_size == 0:
+                    continue  # Skip empty files
+                
+                # Validate file type by content-type and extension
+                allowed_types = ['application/pdf', 'image/jpeg', 'image/png']
+                allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
+                
+                file_extension = os.path.splitext(file.filename)[1].lower()
+                
+                if file.content_type not in allowed_types or file_extension not in allowed_extensions:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"File type not allowed. Allowed types: PDF, JPG, PNG"
+                    )
+                
+                # Validate file size (10MB max)
+                if file_size > 10 * 1024 * 1024:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"File {file.filename} is too large. Maximum size is 10MB"
+                    )
+                
+                validated_files.append({
+                    'contents': contents,
+                    'filename': file.filename,
+                    'content_type': file.content_type,
+                    'size': file_size,
+                    'extension': file_extension
+                })
+        
+        # Now create case and handle file uploads in single transaction
+        case_data = CaseCreate(
+            title=title,
+            description=description,
+            client_notes=client_notes,
+            package_type=package_type,
+            package_price=package_price
+        )
+        
+        db_case = Case(
+            **case_data.dict(),
+            user_id=current_user.id
+        )
+        db.add(db_case)
+        db.flush()  # Get case ID without committing
+        
+        # Process validated files
+        for file_data in validated_files:
             # Generate unique filename
-            file_extension = os.path.splitext(file.filename)[1]
-            unique_filename = f"{uuid.uuid4()}{file_extension}"
+            unique_filename = f"{uuid.uuid4()}{file_data['extension']}"
             file_path = os.path.join(UPLOAD_DIR, unique_filename)
             
-            # Save file
-            contents = await file.read()
+            # Save file to disk
             with open(file_path, "wb") as f:
-                f.write(contents)
+                f.write(file_data['contents'])
+            uploaded_files_to_cleanup.append(file_path)
             
             # Create document record
-            file_type = "pdf" if file.content_type == "application/pdf" else "image"
+            file_type = "pdf" if file_data['content_type'] == "application/pdf" else "image"
             db_document = Document(
                 filename=unique_filename,
-                original_filename=file.filename,
+                original_filename=file_data['filename'],
                 file_type=file_type,
-                file_size=file.size,
+                file_size=file_data['size'],
                 file_path=file_path,
                 case_id=db_case.id
             )
             db.add(db_document)
-            uploaded_documents.append(db_document)
+        
+        # Only commit if everything succeeded
+        db.commit()
+        
+        # Refresh case with documents
+        db.refresh(db_case)
+        
+        return db_case
     
-    db.commit()
-    
-    # Refresh case with documents
-    db.refresh(db_case)
-    
-    return db_case
+    except Exception as e:
+        # Cleanup uploaded files on any error
+        for file_path in uploaded_files_to_cleanup:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        # Rollback all database changes
+        db.rollback()
+        raise e
 
-@router.get("/", response_model=List[CaseInDB])
+@router.get("", response_model=List[CaseInDB])
 def get_user_cases(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
