@@ -19,6 +19,18 @@ import {
   CheckCircle2,
   Clock4,
   AlertCircle,
+  Menu,
+  X,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
+  DollarSign,
+  FileEdit,
+  Save,
+  Trash2,
+  Mail,
+  Phone,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -166,12 +178,58 @@ export default function PanelOperatoraPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
       <Header />
-      <div className="flex flex-1">
+      
+      {/* Mobile header with sidebar toggle */}
+      <header className="lg:hidden bg-white shadow-sm border-b sticky top-16 z-50">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="mr-3"
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
+            <h1 className="text-lg font-semibold">Panel Operatora</h1>
+          </div>
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <User className="h-4 w-4 text-blue-600" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-1 relative">
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div
+            className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* ----------------------------- SIDEBAR ---------------------------- */}
         <aside
-          className={`bg-white shadow-lg transition-all duration-300 ${sidebarOpen ? "w-64" : "w-64 hidden lg:block"}`}
+          className={`bg-white shadow-lg transition-all duration-300 z-50 ${
+            sidebarOpen 
+              ? "fixed lg:static inset-y-0 left-0 w-64" 
+              : "w-64 hidden lg:block"
+          }`}
         >
           <div className="p-6 h-full flex flex-col">
+            {/* Mobile close button */}
+            <div className="lg:hidden flex justify-end mb-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+            
             {/* operator info */}
             <div className="flex items-center mb-6">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
@@ -188,7 +246,13 @@ export default function PanelOperatoraPage() {
               {sidebarItems.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
-                  onClick={() => setActiveTab(id as typeof activeTab)}
+                  onClick={() => {
+                    setActiveTab(id as typeof activeTab);
+                    // Close mobile sidebar when item is clicked
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
                     activeTab === id
                       ? "bg-blue-100 text-blue-700"
