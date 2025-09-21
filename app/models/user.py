@@ -10,3 +10,6 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
+    
+    # Relationship to cases
+    cases = relationship("Case", back_populates="user", cascade="all, delete-orphan")

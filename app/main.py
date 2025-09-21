@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 
 from app.db.database import Base, engine, get_db
-from app.models import kancelaria, user # Import models to ensure they are registered with SQLAlchemy
+from app.models import kancelaria, user, case # Import models to ensure they are registered with SQLAlchemy
 
 Base.metadata.create_all(bind=engine) # Create database tables
 
@@ -24,10 +24,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.api.v1.endpoints import kancelarie, users
+from app.api.v1.endpoints import kancelarie, users, cases
 app.include_router(kancelarie.router, prefix="/api/v1/kancelarie", tags=["kancelarie"])
 app.include_router(kancelarie.router, prefix="/api/v1/law-firms", tags=["law-firms"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(cases.router, prefix="/api/v1/cases", tags=["cases"])
 
 @app.get("/")
 async def root():

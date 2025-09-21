@@ -1,19 +1,21 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { authAPI } from "@/lib/api/auth";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
 /* -------------------------------------------------------------------------- */
 
 export interface User {
-  id: string;
+  id: number;
   email: string;
   phone?: string;
-  name: string;
+  name?: string;
   role: "client" | "operator" | "admin";
-  createdAt: Date;
+  createdAt?: Date;
   avatar?: string;
+  token?: string;
+  is_active: boolean;
 }
 
 interface AuthStore {
@@ -24,7 +26,7 @@ interface AuthStore {
   login: (user: User) => void;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
-  /* Supabase helpers */
+  /* FastAPI backend helpers */
   signInWithEmail: (
     email: string,
     password: string,
@@ -32,7 +34,7 @@ interface AuthStore {
   signUpWithEmail: (
     email: string,
     password: string,
-    name: string,
+    name?: string,
   ) => Promise<{ user: User | null; error: string | null }>;
   signOut: () => Promise<{ error: string | null }>;
   fetchUserSession: () => Promise<void>;
@@ -56,96 +58,72 @@ export const useAuth = create<AuthStore>()(
         if (current) set({ user: { ...current, ...updates } });
       },
 
-      /* ---------- Supabase helpers (safe if not configured) ---------- */
+      /* ---------- FastAPI backend helpers ---------- */
       signInWithEmail: async (email, password) => {
-        if (!isSupabaseConfigured()) {
-          return {
-            user: null,
-            error:
-              "Logowanie chwilowo niedostępne (brak konfiguracji Supabase).",
-          };
-        }
-
         try {
-          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-          const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-          const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "apikey": supabaseAnonKey ?? "",
-            },
-            body: JSON.stringify({ email, password }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            return { user: null, error: data.error_description || data.error || "Błąd logowania." };
+          const result = await authAPI.login(email, password);
+          if (result.user) {
+            authAPI.setToken(result.user.token);
+            const userWithDefaults = {
+              ...result.user,
+              name: result.user.name || result.user.email.split('@')[0],
+              role: "client" as const,
+              createdAt: new Date(),
+            };
+            set({ user: userWithDefaults, isAuthenticated: true });
           }
-          // data.user nie istnieje, trzeba pobrać usera przez getUser
-          const access_token = data.access_token;
-          if (!access_token) return { user: null, error: "Brak access_token po logowaniu." };
-
-          // Pobierz usera na podstawie access_token
-          const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
-            headers: {
-              "apikey": supabaseAnonKey ?? "",
-              "Authorization": `Bearer ${access_token}`,
-            },
-          });
-          const userData = await userRes.json();
-          if (!userRes.ok || !userData) {
-            return { user: null, error: "Nie udało się pobrać danych użytkownika." };
-          }
-          const user = supabaseUserToLocal(userData);
-          set({ user, isAuthenticated: true });
-          return { user, error: null };
+          return result;
         } catch (err) {
           return { user: null, error: (err as Error).message };
         }
       },
 
       signUpWithEmail: async (email, password, name) => {
-        if (!isSupabaseConfigured()) {
-          return {
-            user: null,
-            error:
-              "Rejestracja chwilowo niedostępna (brak konfiguracji Supabase).",
-          };
+        try {
+          const result = await authAPI.register(email, password);
+          if (result.user) {
+            // After registration, automatically log in
+            const loginResult = await authAPI.login(email, password);
+            if (loginResult.user) {
+              authAPI.setToken(loginResult.user.token);
+              const userWithDefaults = {
+                ...loginResult.user,
+                name: name || loginResult.user.email.split('@')[0],
+                role: "client" as const,
+                createdAt: new Date(),
+              };
+              set({ user: userWithDefaults, isAuthenticated: true });
+              return { user: userWithDefaults, error: null };
+            }
+          }
+          return result;
+        } catch (err) {
+          return { user: null, error: (err as Error).message };
         }
-
-        const { data, error } = await createClient().auth.signUp({
-          email,
-          password,
-          options: { data: { name, role: "client" } },
-        });
-        if (error) return { user: null, error: error.message };
-
-        const u = data.user;
-        if (!u) return { user: null, error: "Nieoczekiwany błąd rejestracji." };
-
-        const user = supabaseUserToLocal(u);
-        set({ user, isAuthenticated: true });
-        return { user, error: null };
       },
 
       signOut: async () => {
-        if (!isSupabaseConfigured()) {
-          set({ user: null, isAuthenticated: false });
-          return { error: null };
-        }
-        const { error } = await createClient().auth.signOut();
-        if (!error) set({ user: null, isAuthenticated: false });
-        return { error: error?.message || null };
+        authAPI.clearToken();
+        set({ user: null, isAuthenticated: false });
+        return { error: null };
       },
 
       fetchUserSession: async () => {
-        if (!isSupabaseConfigured()) return;
-        const { data } = await createClient().auth.getSession();
-        const u = data.session?.user;
-        if (u) {
-          set({ user: supabaseUserToLocal(u), isAuthenticated: true });
-        } else {
-          set({ user: null, isAuthenticated: false });
+        const storedUser = get().user;
+        if (storedUser?.token) {
+          authAPI.setToken(storedUser.token);
+          const result = await authAPI.getCurrentUser();
+          if (result.user) {
+            const userWithDefaults = {
+              ...result.user,
+              name: result.user.name || result.user.email.split('@')[0],
+              role: storedUser.role || "client" as const,
+              createdAt: storedUser.createdAt || new Date(),
+            };
+            set({ user: userWithDefaults, isAuthenticated: true });
+          } else {
+            set({ user: null, isAuthenticated: false });
+          }
         }
       },
     }),
@@ -161,18 +139,6 @@ export const useAuth = create<AuthStore>()(
 /* Helpers                                                                     */
 /* -------------------------------------------------------------------------- */
 
-function supabaseUserToLocal(u: unknown): User {
-  return {
-    id: (u as any).id,
-    email: (u as any).email ?? "",
-    name: (u as any).user_metadata?.name ?? (u as any).email?.split("@")[0] ?? "Użytkownik",
-    role: (u as any).user_metadata?.role as User["role"] || "client",
-    createdAt: new Date((u as any).created_at),
-    phone: (u as any).phone || undefined,
-    avatar: (u as any).user_metadata?.avatar || undefined,
-  };
-}
-
 /**
  * Dev-only helper preserved for legacy imports and tests.
  * Provides an in-memory “login” that doesn’t hit Supabase at all.
@@ -182,11 +148,12 @@ export const mockLogin = (
   role: User["role"] = "client",
 ): User => {
   const user: User = {
-    id: Math.random().toString(36).slice(2, 9),
+    id: Math.floor(Math.random() * 10000),
     email,
     name: email.split("@")[0],
     role,
     createdAt: new Date(),
+    is_active: true,
   };
   useAuth.getState().login(user);
   return user;
