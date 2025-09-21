@@ -42,8 +42,16 @@ export class AuthAPIClient {
   private token: string | null = null;
 
   constructor() {
-    // Use localhost backend since both services are in the same Replit environment
-    this.baseUrl = 'http://localhost:8000';
+    // Use the correct backend URL for Replit environment
+    if (typeof window !== 'undefined') {
+      // Browser environment - use the current domain with port 8000
+      const currentDomain = window.location.hostname;
+      this.baseUrl = `https://${currentDomain}:8000`;
+    } else {
+      // Server-side rendering - use environment variable or fallback
+      const replitDomain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS;
+      this.baseUrl = replitDomain ? `https://${replitDomain}:8000` : 'http://localhost:8000';
+    }
   }
 
   async makeRequest<T>(
