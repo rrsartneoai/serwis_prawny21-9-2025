@@ -46,11 +46,12 @@ export class AuthAPIClient {
     if (typeof window !== 'undefined') {
       // Browser environment - use the current domain with port 8000
       const currentDomain = window.location.hostname;
-      this.baseUrl = `https://${currentDomain}:8000`;
+      // Use HTTP for development/local backend
+      this.baseUrl = `http://${currentDomain}:8000`;
     } else {
       // Server-side rendering - use environment variable or fallback
       const replitDomain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS;
-      this.baseUrl = replitDomain ? `https://${replitDomain}:8000` : 'http://localhost:8000';
+      this.baseUrl = replitDomain ? `http://${replitDomain.split('-')[0]}:8000` : 'http://localhost:8000';
     }
   }
 
