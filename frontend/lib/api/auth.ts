@@ -49,8 +49,15 @@ export class AuthAPIClient {
       if (backendUrl) {
         this.baseUrl = backendUrl;
       } else {
-        // Use relative URLs that will be handled by Next.js rewrites
-        this.baseUrl = '';
+        // Use the Replit domain with backend port
+        const domain = window.location.hostname;
+        if (domain.includes('replit.dev')) {
+          // Use the same domain but with port 8000 for backend
+          this.baseUrl = `${window.location.protocol}//${domain}:8000`;
+        } else {
+          // Local development fallback
+          this.baseUrl = 'http://localhost:8000';
+        }
       }
       
       // Load existing token from localStorage
