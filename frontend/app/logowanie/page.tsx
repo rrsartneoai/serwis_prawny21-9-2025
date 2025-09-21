@@ -8,48 +8,139 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/lib/auth"; // Updated import
-import { ArrowLeft, Mail, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Mail, Eye, EyeOff, Phone, MessageSquare, Shield } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
 
 export default function LogowaniePage() {
-  const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
+  const [loginMethod, setLoginMethod] = useState<"email" | "phone" | "email-code">("email");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { signInWithEmail } = useAuth(); // Use signInWithEmail
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationSentTo, setVerificationSentTo] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const { signInWithEmail, signInWithPhone, signInWithEmailCode, signInWithGoogle, verifyCode, pendingVerification } = useAuth();
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleEmailPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login form submitted");
     setIsLoading(true);
-    const { user, error } = await signInWithEmail(email, password);
+    
+    const result = await signInWithEmail(email, password);
 
-    if (error) {
+    if (result.error) {
       toast({
         title: "Błąd logowania",
-        description: error,
+        description: result.error,
         variant: "destructive",
       });
-    } else if (user) {
+    } else if (result.user) {
+      if (result.requiresVerification) {
+        setShowVerification(true);
+        setCurrentUserId(result.user.id);
+        setVerificationSentTo(result.verificationSentTo || "");
+        toast({
+          title: "Kod weryfikacyjny wysłany",
+          description: `Sprawdź ${result.verificationSentTo}`,
+        });
+      } else {
+        toast({
+          title: "Zalogowano pomyślnie!",
+          description: `Witaj z powrotem, ${result.user.name}!`,
+        });
+        router.push("/panel-klienta");
+      }
+    }
+    setIsLoading(false);
+  };
+
+  const handlePhoneLogin = async () => {
+    setIsLoading(true);
+    
+    const result = await signInWithPhone(phone);
+
+    if (result.error) {
       toast({
-        title: "Zalogowano pomyślnie!",
-        description: `Witaj z powrotem, ${user.name}!`,
+        title: "Błąd logowania",
+        description: result.error,
+        variant: "destructive",
+      });
+    } else if (result.user) {
+      setShowVerification(true);
+      setCurrentUserId(result.user.id);
+      setVerificationSentTo(result.verificationSentTo || "");
+      toast({
+        title: "Kod SMS wysłany",
+        description: `Sprawdź wiadomości na ${result.verificationSentTo}`,
+      });
+    }
+    setIsLoading(false);
+  };
+
+  const handleEmailCodeLogin = async () => {
+    setIsLoading(true);
+    
+    const result = await signInWithEmailCode(email);
+
+    if (result.error) {
+      toast({
+        title: "Błąd logowania",
+        description: result.error,
+        variant: "destructive",
+      });
+    } else if (result.user) {
+      setShowVerification(true);
+      setCurrentUserId(result.user.id);
+      setVerificationSentTo(result.verificationSentTo || "");
+      toast({
+        title: "Kod weryfikacyjny wysłany",
+        description: `Sprawdź email na ${result.verificationSentTo}`,
+      });
+    }
+    setIsLoading(false);
+  };
+
+  const handleVerifyCode = async () => {
+    if (!currentUserId || !verificationCode) return;
+    
+    setIsLoading(true);
+    const codeType = loginMethod === "phone" ? "sms" : "email";
+    
+    const result = await verifyCode(currentUserId, verificationCode, codeType);
+
+    if (result.error) {
+      toast({
+        title: "Błąd weryfikacji",
+        description: result.error,
+        variant: "destructive",
+      });
+    } else if (result.user) {
+      toast({
+        title: "Logowanie pomyślne!",
+        description: `Witaj ${result.user.name}!`,
       });
       router.push("/panel-klienta");
     }
     setIsLoading(false);
   };
 
-  // Social login will be implemented later with Supabase OAuth
-  const handleSocialLogin = (provider: string) => {
-    toast({
-      title: "Funkcja w budowie",
-      description: `Logowanie przez ${provider} zostanie wkrótce dodane.`,
-    });
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    const result = await signInWithGoogle();
+    if (result.error) {
+      toast({
+        title: "Błąd logowania",
+        description: result.error,
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
+    // If successful, user will be redirected to Google
   };
 
   return (
@@ -79,7 +170,7 @@ export default function LogowaniePage() {
                 <Button
                   variant="outline"
                   className="w-full bg-transparent"
-                  onClick={() => handleSocialLogin("google")}
+                  onClick={handleGoogleLogin}
                   disabled={isLoading}
                 >
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -106,7 +197,10 @@ export default function LogowaniePage() {
                 <Button
                   variant="outline"
                   className="w-full bg-transparent"
-                  onClick={() => handleSocialLogin("facebook")}
+                  onClick={() => toast({
+                    title: "Funkcja w budowie",
+                    description: "Logowanie przez Facebook zostanie wkrótce dodane.",
+                  })}
                   disabled={isLoading}
                 >
                   <svg
@@ -129,85 +223,201 @@ export default function LogowaniePage() {
                 </div>
               </div>
 
-              {/* Login Method Selection - simplified for email/password only */}
-              <div className="flex space-x-2">
-                <Button
-                  variant={loginMethod === "email" ? "default" : "outline"}
-                  className="flex-1"
-                  onClick={() => setLoginMethod("email")}
-                  disabled={isLoading}
-                >
-                  <Mail className="mr-2 h-4 w-4" />
-                  Email
-                </Button>
-                {/* Phone login removed for now, focusing on email/password with Supabase */}
-                {/* <Button
-                  variant={loginMethod === "phone" ? "default" : "outline"}
-                  className="flex-1"
-                  onClick={() => setLoginMethod("phone")}
-                >
-                  <Phone className="mr-2 h-4 w-4" />
-                  Telefon
-                </Button> */}
-              </div>
-
-              {/* Login Form */}
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Adres email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="twoj@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+              {/* Login Method Selection */}
+              {!showVerification && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <Button
+                    variant={loginMethod === "email" ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setLoginMethod("email")}
                     disabled={isLoading}
-                  />
+                  >
+                    <Mail className="mr-2 h-4 w-4" />
+                    Email + Hasło
+                  </Button>
+                  <Button
+                    variant={loginMethod === "phone" ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setLoginMethod("phone")}
+                    disabled={isLoading}
+                  >
+                    <Phone className="mr-2 h-4 w-4" />
+                    SMS
+                  </Button>
+                  <Button
+                    variant={loginMethod === "email-code" ? "default" : "outline"}
+                    className="flex-1"
+                    onClick={() => setLoginMethod("email-code")}
+                    disabled={isLoading}
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Kod Email
+                  </Button>
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Hasło</Label>
-                  <div className="relative">
+              {/* Verification Code Form */}
+              {showVerification && (
+                <div className="space-y-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <Shield className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                    <h3 className="font-medium text-blue-900">Kod weryfikacyjny</h3>
+                    <p className="text-sm text-blue-700">
+                      Wysłaliśmy kod na: {verificationSentTo}
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="verification">Kod weryfikacyjny</Label>
                     <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Wprowadź hasło"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
+                      id="verification"
+                      type="text"
+                      placeholder="123456"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      maxLength={6}
                       disabled={isLoading}
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => {
+                        setShowVerification(false);
+                        setVerificationCode("");
+                        setCurrentUserId(null);
+                      }}
                       disabled={isLoading}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      Anuluj
+                    </Button>
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleVerifyCode}
+                      disabled={isLoading || !verificationCode}
+                    >
+                      {isLoading ? "Weryfikacja..." : "Zweryfikuj"}
                     </Button>
                   </div>
                 </div>
+              )}
 
-                <div className="flex items-center justify-between">
-                  <Link
-                    href="/zapomnialem-hasla"
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Zapomniałeś hasła?
-                  </Link>
-                </div>
+              {/* Login Forms */}
+              {!showVerification && (
+                <>
+                  {/* Email + Password Login */}
+                  {loginMethod === "email" && (
+                    <form onSubmit={handleEmailPasswordLogin} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Adres email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="twoj@email.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Logowanie..." : "Zaloguj się"}
-                </Button>
-              </form>
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Hasło</Label>
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Wprowadź hasło"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                            disabled={isLoading}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <Link
+                          href="/zapomnialem-hasla"
+                          className="text-sm text-blue-600 hover:underline"
+                        >
+                          Zapomniałeś hasła?
+                        </Link>
+                      </div>
+
+                      <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? "Logowanie..." : "Zaloguj się"}
+                      </Button>
+                    </form>
+                  )}
+
+                  {/* Phone/SMS Login */}
+                  {loginMethod === "phone" && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Numer telefonu</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="+48 123 456 789"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          disabled={isLoading}
+                        />
+                      </div>
+
+                      <Button 
+                        className="w-full" 
+                        onClick={handlePhoneLogin}
+                        disabled={isLoading || !phone}
+                      >
+                        {isLoading ? "Wysyłanie SMS..." : "Wyślij kod SMS"}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Email Code Login */}
+                  {loginMethod === "email-code" && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email-code">Adres email</Label>
+                        <Input
+                          id="email-code"
+                          type="email"
+                          placeholder="twoj@email.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          disabled={isLoading}
+                        />
+                      </div>
+
+                      <Button 
+                        className="w-full" 
+                        onClick={handleEmailCodeLogin}
+                        disabled={isLoading || !email}
+                      >
+                        {isLoading ? "Wysyłanie kodu..." : "Wyślij kod na email"}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
 
               <div className="text-center">
                 <span className="text-gray-600">Nie masz konta? </span>

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { authAPI } from "@/lib/api/auth";
+import { authAPI, type User as APIUser, type AuthResponse } from "@/lib/api/auth";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -10,32 +10,41 @@ export interface User {
   id: number;
   email: string;
   phone?: string;
+  first_name?: string;
+  last_name?: string;
   name?: string;
   role: "client" | "operator" | "admin";
-  createdAt?: Date;
-  avatar?: string;
-  token?: string;
+  auth_provider: "email" | "phone" | "google" | "facebook";
   is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+  token?: string;
+}
+
+export interface AuthResult {
+  user: User | null;
+  error: string | null;
+  requiresVerification?: boolean;
+  verificationSentTo?: string;
 }
 
 interface AuthStore {
   /* state */
   user: User | null;
   isAuthenticated: boolean;
+  pendingVerification: boolean;
   /* local helpers */
   login: (user: User) => void;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   /* FastAPI backend helpers */
-  signInWithEmail: (
-    email: string,
-    password: string,
-  ) => Promise<{ user: User | null; error: string | null }>;
-  signUpWithEmail: (
-    email: string,
-    password: string,
-    name?: string,
-  ) => Promise<{ user: User | null; error: string | null }>;
+  signInWithEmail: (email: string, password: string) => Promise<AuthResult>;
+  signUpWithEmail: (email: string, password: string, firstName?: string, lastName?: string) => Promise<AuthResult>;
+  signInWithPhone: (phone: string) => Promise<AuthResult>;
+  signInWithEmailCode: (email: string) => Promise<AuthResult>;
+  verifyCode: (userId: number, code: string, codeType: 'sms' | 'email') => Promise<AuthResult>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
+  handleGoogleCallback: (code: string) => Promise<AuthResult>;
   signOut: () => Promise<{ error: string | null }>;
   fetchUserSession: () => Promise<void>;
 }
@@ -44,15 +53,24 @@ interface AuthStore {
 /* Zustand store                                                              */
 /* -------------------------------------------------------------------------- */
 
+const convertAPIUserToUser = (apiUser: APIUser, token: string): User => ({
+  ...apiUser,
+  name: apiUser.first_name && apiUser.last_name 
+    ? `${apiUser.first_name} ${apiUser.last_name}`
+    : apiUser.first_name || apiUser.last_name || apiUser.email.split('@')[0],
+  token
+});
+
 export const useAuth = create<AuthStore>()(
   persist(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
+      pendingVerification: false,
 
       /* ---------- local state helpers ---------- */
-      login: (user) => set({ user, isAuthenticated: true }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      login: (user) => set({ user, isAuthenticated: true, pendingVerification: false }),
+      logout: () => set({ user: null, isAuthenticated: false, pendingVerification: false }),
       updateUser: (updates) => {
         const current = get().user;
         if (current) set({ user: { ...current, ...updates } });
@@ -62,41 +80,138 @@ export const useAuth = create<AuthStore>()(
       signInWithEmail: async (email, password) => {
         try {
           const result = await authAPI.login(email, password);
-          if (result.user) {
-            authAPI.setToken(result.user.token);
-            const userWithDefaults = {
-              ...result.user,
-              name: result.user.name || result.user.email.split('@')[0],
-              role: "client" as const,
-              createdAt: new Date(),
-            };
-            set({ user: userWithDefaults, isAuthenticated: true });
+          if (result.data) {
+            const user = convertAPIUserToUser(result.data.user, result.data.access_token);
+            authAPI.setToken(result.data.access_token);
+            
+            if (result.data.requires_verification) {
+              set({ pendingVerification: true, user });
+              return { 
+                user, 
+                error: null, 
+                requiresVerification: true,
+                verificationSentTo: result.data.verification_sent_to 
+              };
+            } else {
+              set({ user, isAuthenticated: true, pendingVerification: false });
+              return { user, error: null };
+            }
           }
-          return result;
+          return { user: null, error: result.error };
         } catch (err) {
           return { user: null, error: (err as Error).message };
         }
       },
 
-      signUpWithEmail: async (email, password, name) => {
+      signUpWithEmail: async (email, password, firstName, lastName) => {
         try {
-          const result = await authAPI.register(email, password);
-          if (result.user) {
-            // After registration, automatically log in
-            const loginResult = await authAPI.login(email, password);
-            if (loginResult.user) {
-              authAPI.setToken(loginResult.user.token);
-              const userWithDefaults = {
-                ...loginResult.user,
-                name: name || loginResult.user.email.split('@')[0],
-                role: "client" as const,
-                createdAt: new Date(),
+          const result = await authAPI.register(email, password, firstName, lastName);
+          if (result.data) {
+            const user = convertAPIUserToUser(result.data.user, result.data.access_token);
+            authAPI.setToken(result.data.access_token);
+            
+            if (result.data.requires_verification) {
+              set({ pendingVerification: true, user });
+              return { 
+                user, 
+                error: null, 
+                requiresVerification: true,
+                verificationSentTo: result.data.verification_sent_to 
               };
-              set({ user: userWithDefaults, isAuthenticated: true });
-              return { user: userWithDefaults, error: null };
+            } else {
+              set({ user, isAuthenticated: true, pendingVerification: false });
+              return { user, error: null };
             }
           }
-          return result;
+          return { user: null, error: result.error };
+        } catch (err) {
+          return { user: null, error: (err as Error).message };
+        }
+      },
+
+      signInWithPhone: async (phone) => {
+        try {
+          const result = await authAPI.startPhoneLogin(phone);
+          if (result.data) {
+            const user = convertAPIUserToUser(result.data.user, result.data.access_token);
+            authAPI.setToken(result.data.access_token);
+            set({ pendingVerification: true, user });
+            return { 
+              user, 
+              error: null, 
+              requiresVerification: true,
+              verificationSentTo: result.data.verification_sent_to 
+            };
+          }
+          return { user: null, error: result.error };
+        } catch (err) {
+          return { user: null, error: (err as Error).message };
+        }
+      },
+
+      signInWithEmailCode: async (email) => {
+        try {
+          const result = await authAPI.startEmailLogin(email);
+          if (result.data) {
+            const user = convertAPIUserToUser(result.data.user, result.data.access_token);
+            authAPI.setToken(result.data.access_token);
+            set({ pendingVerification: true, user });
+            return { 
+              user, 
+              error: null, 
+              requiresVerification: true,
+              verificationSentTo: result.data.verification_sent_to 
+            };
+          }
+          return { user: null, error: result.error };
+        } catch (err) {
+          return { user: null, error: (err as Error).message };
+        }
+      },
+
+      verifyCode: async (userId, code, codeType) => {
+        try {
+          const result = await authAPI.verifyCode(userId, code, codeType);
+          if (result.data && result.data.success) {
+            if (result.data.access_token) {
+              authAPI.setToken(result.data.access_token);
+            }
+            const currentUser = get().user;
+            if (currentUser) {
+              const updatedUser = { ...currentUser, is_verified: true };
+              set({ user: updatedUser, isAuthenticated: true, pendingVerification: false });
+              return { user: updatedUser, error: null };
+            }
+          }
+          return { user: null, error: result.data?.message || result.error };
+        } catch (err) {
+          return { user: null, error: (err as Error).message };
+        }
+      },
+
+      signInWithGoogle: async () => {
+        try {
+          const result = await authAPI.getGoogleAuthUrl();
+          if (result.data) {
+            window.location.href = result.data.auth_url;
+            return { error: null };
+          }
+          return { error: result.error };
+        } catch (err) {
+          return { error: (err as Error).message };
+        }
+      },
+
+      handleGoogleCallback: async (code) => {
+        try {
+          const result = await authAPI.handleGoogleCallback(code);
+          if (result.data) {
+            const user = convertAPIUserToUser(result.data.user, result.data.access_token);
+            authAPI.setToken(result.data.access_token);
+            set({ user, isAuthenticated: true, pendingVerification: false });
+            return { user, error: null };
+          }
+          return { user: null, error: result.error };
         } catch (err) {
           return { user: null, error: (err as Error).message };
         }
@@ -104,7 +219,7 @@ export const useAuth = create<AuthStore>()(
 
       signOut: async () => {
         authAPI.clearToken();
-        set({ user: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false, pendingVerification: false });
         return { error: null };
       },
 
@@ -113,23 +228,18 @@ export const useAuth = create<AuthStore>()(
         if (storedUser?.token) {
           authAPI.setToken(storedUser.token);
           const result = await authAPI.getCurrentUser();
-          if (result.user) {
-            const userWithDefaults = {
-              ...result.user,
-              name: result.user.name || result.user.email.split('@')[0],
-              role: storedUser.role || "client" as const,
-              createdAt: storedUser.createdAt || new Date(),
-            };
-            set({ user: userWithDefaults, isAuthenticated: true });
+          if (result.data) {
+            const user = convertAPIUserToUser(result.data, storedUser.token);
+            set({ user, isAuthenticated: true, pendingVerification: false });
           } else {
-            set({ user: null, isAuthenticated: false });
+            set({ user: null, isAuthenticated: false, pendingVerification: false });
           }
         }
       },
     }),
     {
       name: "auth-storage",
-      partialize: (s) => ({ user: s.user, isAuthenticated: s.isAuthenticated }),
+      partialize: (s) => ({ user: s.user, isAuthenticated: s.isAuthenticated, pendingVerification: s.pendingVerification }),
       onRehydrateStorage: () => (s) => s?.fetchUserSession(),
     },
   ),

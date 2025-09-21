@@ -1,23 +1,40 @@
 // Authentication API client for FastAPI backend
-export interface AuthResponse {
-  user: any;
-  error: string | null;
-}
-
-export interface LoginResponse {
-  access_token: string;
-  token_type: string;
-}
 
 export interface User {
   id: number;
   email: string;
+  phone?: string;
+  first_name?: string;
+  last_name?: string;
+  company_name?: string;
+  role: "client" | "operator" | "admin";
+  auth_provider: "email" | "phone" | "google" | "facebook";
   is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+  last_login?: string;
 }
 
-export interface RegisterRequest {
-  email: string;
-  password: string;
+export interface AuthResponse {
+  user: User;
+  access_token: string;
+  requires_verification?: boolean;
+  verification_sent_to?: string;
+}
+
+export interface VerificationResponse {
+  success: boolean;
+  message: string;
+  access_token?: string;
+}
+
+export interface AuthUrlResponse {
+  auth_url: string;
+}
+
+export interface ApiResponse<T> {
+  data: T | null;
+  error: string | null;
 }
 
 export class AuthAPIClient {
@@ -25,22 +42,47 @@ export class AuthAPIClient {
   private token: string | null = null;
 
   constructor() {
-    // Use the backend URL - in development it's localhost:8000, in production use the domain
-    this.baseUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN || window.location.hostname}:8000`
-      : 'http://localhost:8000';
+    // Use the backend URL - detect Replit environment
+    if (typeof window !== 'undefined') {
+      // Check for environment variable first
+      if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+        this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+        return;
+      }
+
+      const hostname = window.location.hostname;
+      const port = window.location.port;
+      
+      if (hostname.includes('replit.dev') || hostname.includes('replit.co')) {
+        // In Replit environment, replace frontend port with backend port 8000
+        // Replit URLs are like: abcd-3000-xyz.replit.dev -> abcd-8000-xyz.replit.dev
+        if (port && hostname.includes(`-${port}-`)) {
+          this.baseUrl = `https://${hostname.replace(`-${port}-`, '-8000-')}`;
+        } else {
+          // Fallback: assume standard pattern and replace common frontend ports
+          this.baseUrl = `https://${hostname.replace('-3000-', '-8000-').replace('-5000-', '-8000-')}`;
+        }
+      } else if (hostname === 'localhost') {
+        this.baseUrl = 'http://localhost:8000';
+      } else {
+        this.baseUrl = `https://${hostname}:8000`;
+      }
+    } else {
+      this.baseUrl = 'http://localhost:8000';
+    }
   }
 
   async makeRequest<T>(
     method: string,
     endpoint: string,
     data?: any,
-    includeAuth = false,
-    isFormData = false
+    includeAuth = false
   ): Promise<T> {
     const url = `${this.baseUrl}/api/v1${endpoint}`;
     
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
 
     if (includeAuth && this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
@@ -51,22 +93,8 @@ export class AuthAPIClient {
       headers,
     };
 
-    if (data) {
-      if (method === 'POST' && endpoint === '/users/token') {
-        // For login endpoint, use form data
-        const formData = new URLSearchParams();
-        formData.append('username', data.username);
-        formData.append('password', data.password);
-        config.body = formData;
-        headers['Content-Type'] = 'application/x-www-form-urlencoded';
-      } else if (isFormData) {
-        // For file uploads, data is already FormData
-        config.body = data;
-        // Don't set Content-Type for FormData - browser will set it with boundary
-      } else {
-        config.body = JSON.stringify(data);
-        headers['Content-Type'] = 'application/json';
-      }
+    if (data && method !== 'GET') {
+      config.body = JSON.stringify(data);
     }
 
     try {
@@ -83,60 +111,162 @@ export class AuthAPIClient {
     }
   }
 
-  async register(email: string, password: string): Promise<AuthResponse> {
+  // Email/Password Authentication
+  async register(email: string, password: string, firstName?: string, lastName?: string): Promise<ApiResponse<AuthResponse>> {
     try {
-      const user = await this.makeRequest<User>('POST', '/users/register/', {
+      const response = await this.makeRequest<AuthResponse>('POST', '/auth/register', {
         email,
-        password
+        password,
+        first_name: firstName,
+        last_name: lastName,
+        auth_provider: 'email'
       });
       
-      return { user, error: null };
+      if (response.access_token) {
+        this.token = response.access_token;
+      }
+      
+      return { data: response, error: null };
     } catch (error) {
       return { 
-        user: null, 
+        data: null, 
         error: error instanceof Error ? error.message : 'Registration failed' 
       };
     }
   }
 
-  async login(email: string, password: string): Promise<AuthResponse> {
+  async login(email: string, password: string): Promise<ApiResponse<AuthResponse>> {
     try {
-      // First get the token
-      const tokenResponse = await this.makeRequest<LoginResponse>('POST', '/users/token', {
-        username: email, // FastAPI uses username field for email
+      const response = await this.makeRequest<AuthResponse>('POST', '/auth/login', {
+        email,
         password
       });
       
-      this.token = tokenResponse.access_token;
+      if (response.access_token) {
+        this.token = response.access_token;
+      }
       
-      // Then get user info
-      const user = await this.makeRequest<User>('GET', '/users/me/', null, true);
-      
-      return { user: { ...user, token: this.token }, error: null };
+      return { data: response, error: null };
     } catch (error) {
       return { 
-        user: null, 
+        data: null, 
         error: error instanceof Error ? error.message : 'Login failed' 
       };
     }
   }
 
-  async getCurrentUser(): Promise<AuthResponse> {
+  // Phone/SMS Authentication
+  async startPhoneLogin(phone: string): Promise<ApiResponse<AuthResponse>> {
+    try {
+      const response = await this.makeRequest<AuthResponse>('POST', '/auth/login/phone', {
+        phone
+      });
+      
+      if (response.access_token) {
+        this.token = response.access_token;
+      }
+      
+      return { data: response, error: null };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Phone login failed' 
+      };
+    }
+  }
+
+  // Email Code Authentication
+  async startEmailLogin(email: string): Promise<ApiResponse<AuthResponse>> {
+    try {
+      const response = await this.makeRequest<AuthResponse>('POST', '/auth/login/email', {
+        email
+      });
+      
+      if (response.access_token) {
+        this.token = response.access_token;
+      }
+      
+      return { data: response, error: null };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Email login failed' 
+      };
+    }
+  }
+
+  // Verification Code
+  async verifyCode(userId: number, code: string, codeType: 'sms' | 'email'): Promise<ApiResponse<VerificationResponse>> {
+    try {
+      const response = await this.makeRequest<VerificationResponse>('POST', '/auth/verify', {
+        user_id: userId,
+        code,
+        code_type: codeType
+      });
+      
+      if (response.access_token) {
+        this.token = response.access_token;
+      }
+      
+      return { data: response, error: null };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Verification failed' 
+      };
+    }
+  }
+
+  // Google OAuth
+  async getGoogleAuthUrl(): Promise<ApiResponse<AuthUrlResponse>> {
+    try {
+      const response = await this.makeRequest<AuthUrlResponse>('GET', '/auth/google');
+      return { data: response, error: null };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Failed to get Google auth URL' 
+      };
+    }
+  }
+
+  async handleGoogleCallback(code: string): Promise<ApiResponse<AuthResponse>> {
+    try {
+      const response = await this.makeRequest<AuthResponse>('POST', '/auth/google/callback', {
+        code
+      });
+      
+      if (response.access_token) {
+        this.token = response.access_token;
+      }
+      
+      return { data: response, error: null };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Google authentication failed' 
+      };
+    }
+  }
+
+  // Current User
+  async getCurrentUser(): Promise<ApiResponse<User>> {
     if (!this.token) {
-      return { user: null, error: 'No token available' };
+      return { data: null, error: 'No token available' };
     }
 
     try {
-      const user = await this.makeRequest<User>('GET', '/users/me/', null, true);
-      return { user: { ...user, token: this.token }, error: null };
+      const user = await this.makeRequest<User>('GET', '/auth/me', null, true);
+      return { data: user, error: null };
     } catch (error) {
       return { 
-        user: null, 
+        data: null, 
         error: error instanceof Error ? error.message : 'Failed to get user info' 
       };
     }
   }
 
+  // Token Management
   setToken(token: string) {
     this.token = token;
   }
