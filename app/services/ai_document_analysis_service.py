@@ -9,7 +9,7 @@ import logging
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
 try:
-    import google.generativeai as genai
+    from google import genai
 except ImportError:
     genai = None
 import fitz  # PyMuPDF
@@ -25,16 +25,17 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 
 # Konfiguracja Google Gemini API
-GEMINI_API_KEY = os.getenv("GOOGLE_AI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_AI_API_KEY")
+client = None
 if GEMINI_API_KEY and genai:
-    genai.configure(api_key=GEMINI_API_KEY)
+    client = genai.Client(api_key=GEMINI_API_KEY)
 
 class AIDocumentAnalysisService:
     """Service do automatycznej analizy dokumentów prawnych z użyciem AI"""
     
     def __init__(self, db: Session):
         self.db = db
-        self.model = genai.GenerativeModel('gemini-2.0-flash-exp') if GEMINI_API_KEY and genai else None
+        self.client = client
     
     def extract_text_from_pdf(self, file_path: str) -> str:
         """Ekstrakt tekstu z pliku PDF"""
@@ -89,7 +90,7 @@ class AIDocumentAnalysisService:
     def generate_legal_analysis(self, case: Case, documents_text: str, client_context: Optional[str] = None) -> Dict[str, Any]:
         """Generuje analizę prawną za pomocą AI"""
         
-        if not self.model:
+        if not self.client:
             logger.error("Brak klucza API dla Google Gemini")
             return self._create_error_analysis("Brak konfiguracji AI")
         
@@ -117,6 +118,8 @@ class AIDocumentAnalysisService:
             case_client_agreement = str(case.client_agreement) if case.client_agreement else 'Brak informacji o stanowisku'
             
             user_prompt = f"""
+            {system_prompt}
+            
             SPRAWA: {case_title}
             
             OPIS SPRAWY: {case_description}
@@ -133,8 +136,11 @@ class AIDocumentAnalysisService:
             Przygotuj szczegółową analizę prawną tej sprawy.
             """
             
-            # Generuj analizę za pomocą AI
-            response = self.model.generate_content(user_prompt)
+            # Generuj analizę za pomocą AI używając nowego SDK
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=user_prompt
+            )
             
             # Przetwórz odpowiedź AI
             analysis_text = response.text

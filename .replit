@@ -6,7 +6,7 @@ packages = ["freetype", "gumbo", "harfbuzz", "jbig2dec", "lcms2", "libGL", "libG
 
 [agent]
 expertMode = true
-integrations = ["python_database:1.0.0", "twilio_send_message:1.0.0", "python_log_in_with_replit:1.0.0", "flask_google_oauth:1.0.0", "replitmail:1.0.0", "javascript_google_analytics:1.0.0"]
+integrations = ["python_database:1.0.0", "twilio_send_message:1.0.0", "python_log_in_with_replit:1.0.0", "flask_google_oauth:1.0.0", "replitmail:1.0.0", "javascript_google_analytics:1.0.0", "python_gemini:1.0.0"]
 
 [workflows]
 runButton = "Project"
