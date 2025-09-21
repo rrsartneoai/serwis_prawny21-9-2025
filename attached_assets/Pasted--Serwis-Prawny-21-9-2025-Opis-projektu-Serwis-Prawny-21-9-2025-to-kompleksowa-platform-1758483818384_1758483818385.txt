@@ -1,0 +1,151 @@
+# Serwis Prawny 21-9-2025
+
+## Opis projektu
+
+**Serwis Prawny 21-9-2025** to kompleksowa platforma wspierająca cyfrową obsługę prawną – od generowania dokumentów, przez automatyzację procesów, aż po bezpośredni kontakt z ekspertami. Projekt dedykowany jest zarówno kancelariom, firmom, jak i klientom indywidualnym, zapewniając szybki dostęp do usług prawnych, dokumentacji oraz komunikacji.
+
+Repozytorium publiczne: [serwis_prawny21-9-2025](https://github.com/rrsartneoai/serwis_prawny21-9-2025)
+
+---
+
+## Struktura repozytorium
+
+```
+serwis_prawny21-9-2025/
+│
+├── app/                        # Backend FastAPI
+│   ├── main.py                 # Główna aplikacja FastAPI
+│   ├── api/                    # Endpointy API
+│   │   └── v1/
+│   │       ├── endpoints/      # Logika endpointów
+│   │       └── schemas/        # Schematy Pydantic dla API
+│   ├── core/                   # Konfiguracje, bezpieczeństwo, JWT
+│   ├── db/                     # Obsługa bazy danych (SQLAlchemy)
+│   ├── models/                 # Modele danych
+│   └── tests/                  # Testy jednostkowe
+│
+├── frontend/                   # Frontend Next.js + React + Tailwind
+│   ├── package.json            # Zależności frontendu
+│   ├── lib/                    # Funkcje komunikacji z API/backendem
+│   ├── pages/                  # Strony aplikacji
+│   ├── components/             # Komponenty UI (shadcn/ui)
+│   └── public/                 # Statyczne zasoby (logo, pliki)
+│
+├── requirements.txt            # Zależności backendu (Python)
+├── README.md                   # Dokumentacja techniczna
+├── OPIS.md                     # Opis biznesowy i user-story
+├── openapi.yaml                # Specyfikacja OpenAPI (API backend)
+├── .replit                     # Konfiguracja środowiska Replit
+├── replit.md                   # Instrukcja wdrożenia w Replit
+└── sdk/                        # Generowany SDK kliencki do API
+    ├── python/
+    └── js/
+```
+
+---
+
+## Główne funkcjonalności
+
+1. **Automatyczne generowanie i obsługa dokumentów prawnych**
+   - Kreator umów, pism, wniosków
+   - Edycja, wersjonowanie oraz elektroniczne archiwum dokumentów
+
+2. **System komunikacji z prawnikiem**
+   - Bezpieczny chat tekstowy i wideo
+   - Kalendarz spotkań, powiadomienia
+
+3. **Panel użytkownika i kancelarii**
+   - Zarządzanie sprawami, dokumentacją, kontaktami
+   - Automatyczna klasyfikacja spraw (status, typ)
+
+4. **Automatyzacja procesów prawnych**
+   - Wykorzystanie AI (np. do analizy dokumentów i wsparcia merytorycznego)
+   - Wyszukiwanie aktów prawnych i interpretacji
+
+5. **Bezpieczeństwo i zgodność z RODO**
+   - Szyfrowanie danych
+   - Pełna zgodność z RODO, audyt bezpieczeństwa
+
+---
+
+## Architektura techniczna
+
+- **Monorepo**: frontend (`/frontend`, Next.js), backend (`/app`, FastAPI), SDK (`/sdk`)
+- **Języki**: TypeScript (frontend), Python (backend)
+- **Frontend**: Next.js, React, Tailwind CSS, shadcn/ui, integracja z API
+- **Backend**: FastAPI, SQLAlchemy ORM, Pydantic (walidacja), JWT (autoryzacja)
+- **Baza danych**: SQLite (możliwość rozbudowy)
+- **Integracje**: Supabase, Stripe (płatności), API AI (np. OpenAI), możliwość podłączenia z zewnętrznymi usługami prawnymi
+
+---
+
+## Najważniejsze pliki i katalogi
+
+- `app/main.py` – uruchamia serwer API
+- `app/api/v1/endpoints/` – główne endpointy (np. autoryzacja, sprawy, dokumenty)
+- `app/models/` – definicje modeli danych
+- `frontend/pages/` – strony aplikacji (np. dashboard, dokumenty, kontakt)
+- `frontend/components/` – komponenty interfejsu użytkownika
+- `sdk/python/`, `sdk/js/` – wygenerowane biblioteki klienckie do API
+
+---
+
+## Przykłady integracji i rozszerzeń
+
+- **Integracja API**: Opisana w pliku `openapi.yaml` oraz na stronie `/frontend/app/dokumentacja-api/`
+- **Przykłady kodu**: Dostępne w panelu dokumentacji (JS, Python, PHP)
+- **Automatyzacja**: Możliwe wdrożenie AI do analizy dokumentów (np. OpenAI, HuggingFace)
+- **Bezpieczne płatności**: Stripe, BLIK, faktury VAT
+
+---
+
+## Instalacja i uruchomienie
+
+### Frontend
+
+```bash
+git clone https://github.com/rrsartneoai/serwis_prawny21-9-2025.git
+cd serwis_prawny21-9-2025/frontend
+npm install
+npm run dev
+```
+Frontend działa domyślnie na porcie `5000`.
+
+### Backend
+
+```bash
+cd serwis_prawny21-9-2025/app
+python -m venv venv
+source venv/bin/activate   # (Windows: .\venv\Scripts\activate)
+pip install -r ../requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+Backend FastAPI działa domyślnie na porcie `8000`.
+
+---
+
+## Dostęp do aplikacji
+
+- **Frontend:** http://localhost:5000
+- **Backend API:** http://localhost:8000
+- **Swagger:** http://localhost:8000/api/v1/docs
+
+---
+
+## Rozwój projektu
+
+Projekt jest otwarty na współpracę – zgłaszaj propozycje, błędy, feature requesty.
+
+---
+
+## Licencja
+
+Brak określonej licencji. W sprawie komercyjnego wykorzystania skontaktuj się z właścicielem repozytorium.
+
+---
+
+## Kontakt
+
+Właściciel repozytorium: [rrsartneoai](https://github.com/rrsartneoai)
+
+---
