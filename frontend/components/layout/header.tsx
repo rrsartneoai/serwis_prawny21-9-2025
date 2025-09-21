@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
-  Menu,
+  // Menu removed - no longer using hamburger menu
   User,
   LogIn,
   LogOut,
@@ -46,7 +45,7 @@ interface NavItem {
 export function Header() {
   const { user, isAuthenticated } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Mobile menu removed - no longer using hamburger menu
   const pathname = usePathname();
   const role = user?.role;
 
@@ -190,76 +189,10 @@ export function Header() {
               </Button>
             </div>
           )}
-          {/* Mobile Menu Button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="lg:hidden" 
-            onClick={() => setMobileMenuOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-            <span className="sr-only">Open menu</span>
-          </Button>
+          {/* Mobile Menu Button removed */}
         </div>
       </div>
-      {/* Mobile Menu (Sheet) */}
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="left" className="w-full max-w-xs sm:max-w-sm p-0">
-          <div className="flex flex-col gap-2 p-4">
-            {navItems.map((item) => (
-              item.isScrollLink ? (
-                <Button key={item.name} variant="ghost" className="flex items-center gap-3 text-lg font-medium text-gray-700 hover:text-blue-600" onClick={() => { setMobileMenuOpen(false); scrollToSection(item.href); }}>
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </Button>
-              ) : (
-                <Link key={item.name} href={item.href} className="flex items-center gap-3 text-lg font-medium text-gray-700 hover:text-blue-600" onClick={() => setMobileMenuOpen(false)}>
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </Link>
-              )
-            ))}
-            <div className="mt-2">
-              <div className="font-semibold text-gray-500 mb-1">Usługi</div>
-              {servicesDropdown.map((item) => (
-                <Link key={item.name} href={item.href} className="flex items-center gap-3 text-base text-gray-700 hover:text-blue-600 pl-4" onClick={() => setMobileMenuOpen(false)}>
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-            <div className="mt-2">
-              <div className="font-semibold text-gray-500 mb-1">Informacje</div>
-              {informationDropdown.map((item) => (
-                <Link key={item.name} href={item.href} className="flex items-center gap-3 text-base text-gray-700 hover:text-blue-600 pl-4" onClick={() => setMobileMenuOpen(false)}>
-                  <item.icon className="h-5 w-5" />
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-            <div className="mt-4 flex gap-2">
-              {isAuthenticated ? (
-                <Button variant="outline" size="sm" className="w-full" onClick={() => { mockLogout(); setMobileMenuOpen(false); }}>
-                  <LogOut className="mr-2 h-4 w-4" /> Wyloguj
-                </Button>
-              ) : (
-                <>
-                  <Button variant="outline" size="sm" asChild className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                    <Link href="/logowanie">
-                      <LogIn className="mr-2 h-4 w-4" /> Logowanie
-                    </Link>
-                  </Button>
-                  <Button size="sm" asChild className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                    <Link href="/rejestracja">
-                      <User className="mr-2 h-4 w-4" /> Rejestracja
-                    </Link>
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Mobile Menu removed - no longer using hamburger menu */}
     </header>
   );
 }
