@@ -35,6 +35,6 @@ pytesseract
 pytest
 python-dotenv
 python-jose[cryptography]
-sqlalchemy
+SQLAlchemy
 twilio
 uvicorn
