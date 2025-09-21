@@ -7,7 +7,7 @@ export interface Payment {
   currency: string;
   payment_type: 'analysis' | 'legal_document' | 'package';
   description?: string;
-  provider: 'payu' | 'stripe' | 'paypal' | 'bank_transfer';
+  provider: 'PAYU' | 'STRIPE' | 'PAYPAL' | 'BANK_TRANSFER';
   status: 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled';
   payment_url?: string;
   external_payment_id?: string;
@@ -19,7 +19,7 @@ export interface PaymentCreate {
   case_id: number;
   amount: number;
   payment_type?: 'analysis' | 'legal_document' | 'package';
-  provider?: 'payu' | 'stripe' | 'paypal' | 'bank_transfer';
+  provider?: 'PAYU' | 'STRIPE' | 'PAYPAL' | 'BANK_TRANSFER';
   description?: string;
 }
 

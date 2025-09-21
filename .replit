@@ -51,6 +51,10 @@ waitForPort = 8000
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 42927
+externalPort = 3000
+
 [deployment]
 deploymentTarget = "autoscale"
 run = ["cd frontend && npm start"]

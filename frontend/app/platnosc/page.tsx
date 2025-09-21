@@ -29,7 +29,7 @@ export default function PlatnoscPage() {
   const [loading, setLoading] = useState(true);
   const [caseData, setCaseData] = useState<Case | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState('payu');
+  const [paymentMethod, setPaymentMethod] = useState<'PAYU' | 'STRIPE' | 'BANK_TRANSFER' | 'PAYPAL'>('PAYU');
   const [processing, setProcessing] = useState(false);
 
   // Redirect to login if not authenticated
@@ -81,7 +81,7 @@ export default function PlatnoscPage() {
         case_id: caseData.id,
         amount: parseFloat(amount),
         payment_type: 'analysis',
-        provider: paymentMethod as any,
+        provider: paymentMethod,
         description: `Analiza dokumentów - sprawa #${caseData.id}`
       });
 
@@ -238,10 +238,10 @@ export default function PlatnoscPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div
                       className={`p-4 border rounded-lg cursor-pointer transition-colors ${{
-                        'payu': 'border-blue-500 bg-blue-50',
+                        'PAYU': 'border-blue-500 bg-blue-50',
                         'default': 'border-gray-200 hover:border-gray-300'
-                      }[paymentMethod === 'payu' ? 'payu' : 'default']}`}
-                      onClick={() => setPaymentMethod('payu')}
+                      }[paymentMethod === 'PAYU' ? 'PAYU' : 'default']}`}
+                      onClick={() => setPaymentMethod('PAYU')}
                     >
                       <div className="font-medium">PayU</div>
                       <div className="text-sm text-gray-600">
@@ -254,10 +254,10 @@ export default function PlatnoscPage() {
 
                     <div
                       className={`p-4 border rounded-lg cursor-pointer transition-colors ${{
-                        'stripe': 'border-blue-500 bg-blue-50',
+                        'STRIPE': 'border-blue-500 bg-blue-50',
                         'default': 'border-gray-200 hover:border-gray-300'
-                      }[paymentMethod === 'stripe' ? 'stripe' : 'default']}`}
-                      onClick={() => setPaymentMethod('stripe')}
+                      }[paymentMethod === 'STRIPE' ? 'STRIPE' : 'default']}`}
+                      onClick={() => setPaymentMethod('STRIPE')}
                     >
                       <div className="font-medium">Karta płatnicza</div>
                       <div className="text-sm text-gray-600">
@@ -267,10 +267,10 @@ export default function PlatnoscPage() {
 
                     <div
                       className={`p-4 border rounded-lg cursor-pointer transition-colors ${{
-                        'transfer': 'border-blue-500 bg-blue-50',
+                        'BANK_TRANSFER': 'border-blue-500 bg-blue-50',
                         'default': 'border-gray-200 hover:border-gray-300'
-                      }[paymentMethod === 'transfer' ? 'transfer' : 'default']}`}
-                      onClick={() => setPaymentMethod('transfer')}
+                      }[paymentMethod === 'BANK_TRANSFER' ? 'BANK_TRANSFER' : 'default']}`}
+                      onClick={() => setPaymentMethod('BANK_TRANSFER')}
                     >
                       <div className="font-medium">Przelew internetowy</div>
                       <div className="text-sm text-gray-600">
@@ -280,14 +280,14 @@ export default function PlatnoscPage() {
 
                     <div
                       className={`p-4 border rounded-lg cursor-pointer transition-colors ${{
-                        'blik': 'border-blue-500 bg-blue-50',
+                        'PAYPAL': 'border-blue-500 bg-blue-50',
                         'default': 'border-gray-200 hover:border-gray-300'
-                      }[paymentMethod === 'blik' ? 'blik' : 'default']}`}
-                      onClick={() => setPaymentMethod('blik')}
+                      }[paymentMethod === 'PAYPAL' ? 'PAYPAL' : 'default']}`}
+                      onClick={() => setPaymentMethod('PAYPAL')}
                     >
-                      <div className="font-medium">BLIK</div>
+                      <div className="font-medium">PayPal</div>
                       <div className="text-sm text-gray-600">
-                        Płatność mobilna
+                        Płatność bezpieczna
                       </div>
                     </div>
                   </div>

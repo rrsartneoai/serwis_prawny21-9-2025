@@ -74,11 +74,29 @@ async def create_payment(
             detail="Payment already exists for this case"
         )
     
-    # Create payment record
+    # Server-side amount validation - calculate based on case package
+    server_amount = None
+    if case.package_type == "basic":
+        server_amount = 199.0
+    elif case.package_type == "standard":
+        server_amount = 399.0
+    elif case.package_type == "premium":
+        server_amount = 799.0
+    else:
+        server_amount = 399.0  # default to standard
+    
+    # Validate client amount against server calculation
+    if abs(payment_data.amount - server_amount) > 0.01:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid amount. Expected {server_amount}, got {payment_data.amount}"
+        )
+
+    # Create payment record with server-validated amount
     payment = Payment(
         user_id=current_user.id,
         case_id=payment_data.case_id,
-        amount=payment_data.amount,
+        amount=server_amount,  # Use server-calculated amount
         payment_type=payment_data.payment_type,
         provider=payment_data.provider,
         description=payment_data.description or f"Analiza dokumentów - sprawa #{payment_data.case_id}",
@@ -188,7 +206,16 @@ async def simulate_payment_success(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Simulate successful payment (for development/testing)"""
+    """Simulate successful payment (DEVELOPMENT ONLY - for testing)"""
+    import os
+    
+    # Only allow in development/test environment explicitly
+    environment = os.getenv("ENVIRONMENT", "").lower()
+    if environment not in ["development", "dev", "test"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Simulate payment is only available in development environment"
+        )
     
     payment = db.query(Payment).filter(
         Payment.id == payment_id,
