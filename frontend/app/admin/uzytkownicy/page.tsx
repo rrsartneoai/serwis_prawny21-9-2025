@@ -66,48 +66,37 @@ import {
 } from "lucide-react";
 
 interface User {
-  id: string;
+  id: number;
   email: string;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   phone: string | null;
-  role: "client" | "lawyer" | "admin" | "operator";
-  avatar_url: string | null;
+  role: "CLIENT" | "OPERATOR" | "ADMIN";
   is_active: boolean;
+  is_verified: boolean;
   created_at: string;
-  updated_at: string;
   last_login?: string;
-  law_firm?: {
-    id: string;
-    name: string;
-  };
-  stats?: {
-    api_calls: number;
-    searches: number;
-    documents_analyzed: number;
-  };
 }
 
 interface UserFormData {
   email: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   phone: string;
-  role: "client" | "lawyer" | "admin" | "operator";
+  role: "CLIENT" | "OPERATOR" | "ADMIN";
   is_active: boolean;
-  law_firm_id?: string;
 }
 
 const roleLabels = {
-  client: "Klient",
-  lawyer: "Prawnik",
-  admin: "Administrator",
-  operator: "Operator",
+  CLIENT: "Klient",
+  ADMIN: "Administrator",
+  OPERATOR: "Operator",
 };
 
 const roleColors = {
-  client: "bg-blue-100 text-blue-800",
-  lawyer: "bg-green-100 text-green-800",
-  admin: "bg-red-100 text-red-800",
-  operator: "bg-yellow-100 text-yellow-800",
+  CLIENT: "bg-blue-100 text-blue-800",
+  ADMIN: "bg-red-100 text-red-800",
+  OPERATOR: "bg-yellow-100 text-yellow-800",
 };
 
 export default function UsersManagementPage() {
@@ -122,9 +111,10 @@ export default function UsersManagementPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [formData, setFormData] = useState<UserFormData>({
     email: "",
-    full_name: "",
+    first_name: "",
+    last_name: "",
     phone: "",
-    role: "client",
+    role: "CLIENT",
     is_active: true,
   });
 
@@ -146,12 +136,33 @@ export default function UsersManagementPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/users");
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+      };
+      
+      const response = await fetch("/api/v1/admin/users", { headers: authHeaders });
       if (!response.ok) throw new Error("Failed to fetch users");
 
       const data = await response.json();
-      setUsers(data.users);
-      setStats(data.stats);
+      setUsers(data);
+      
+      // Calculate stats from users data
+      const totalUsers = data.length;
+      const activeUsers = data.filter((u: any) => u.is_active).length;
+      const clientsCount = data.filter((u: any) => u.role === 'CLIENT').length;
+      const operatorsCount = data.filter((u: any) => u.role === 'OPERATOR').length;
+      const adminsCount = data.filter((u: any) => u.role === 'ADMIN').length;
+      
+      setStats({
+        total: totalUsers,
+        active: activeUsers,
+        clients: clientsCount,
+        lawyers: 0,
+        admins: adminsCount,
+        operators: operatorsCount,
+        newThisMonth: 0,
+      });
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Błąd podczas pobierania użytkowników");
@@ -162,9 +173,14 @@ export default function UsersManagementPage() {
 
   const handleCreateUser = async () => {
     try {
-      const response = await fetch("/api/admin/users", {
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+      };
+      
+      const response = await fetch("/api/v1/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify(formData),
       });
 
@@ -184,10 +200,15 @@ export default function UsersManagementPage() {
     if (!selectedUser) return;
 
     try {
-      const response = await fetch(`/api/admin/users/${selectedUser.id}`, {
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+      };
+      
+      const response = await fetch(`/api/v1/admin/users/${selectedUser.id}/role`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        headers: authHeaders,
+        body: JSON.stringify({ role: formData.role }),
       });
 
       if (!response.ok) throw new Error("Failed to update user");
@@ -203,28 +224,31 @@ export default function UsersManagementPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = async (userId: number) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) throw new Error("Failed to delete user");
-
-      toast.success("Użytkownik został usunięty");
-      fetchUsers();
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+      };
+      
+      toast.info("Funkcja usuwania użytkowników nie jest jeszcze dostępna");
+      // TODO: Implement user deletion when backend endpoint is ready
     } catch (error) {
       console.error("Error deleting user:", error);
       toast.error("Błąd podczas usuwania użytkownika");
     }
   };
 
-  const handleToggleUserStatus = async (userId: string, isActive: boolean) => {
+  const handleToggleUserStatus = async (userId: number, isActive: boolean) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active: !isActive }),
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+      };
+      
+      const response = await fetch(`/api/v1/admin/users/${userId}/status`, {
+        method: "PUT",
+        headers: authHeaders,
       });
 
       if (!response.ok) throw new Error("Failed to toggle user status");
@@ -242,9 +266,10 @@ export default function UsersManagementPage() {
   const resetForm = () => {
     setFormData({
       email: "",
-      full_name: "",
+      first_name: "",
+      last_name: "",
       phone: "",
-      role: "client",
+      role: "CLIENT",
       is_active: true,
     });
   };
@@ -253,7 +278,8 @@ export default function UsersManagementPage() {
     setSelectedUser(user);
     setFormData({
       email: user.email,
-      full_name: user.full_name || "",
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
       phone: user.phone || "",
       role: user.role,
       is_active: user.is_active,
@@ -267,10 +293,10 @@ export default function UsersManagementPage() {
   };
 
   const filteredUsers = users.filter((user) => {
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     const matchesSearch =
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ??
-        false);
+      fullName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     const matchesStatus =
       statusFilter === "all" ||
@@ -340,14 +366,25 @@ export default function UsersManagementPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="full_name">Imię i nazwisko</Label>
+                <Label htmlFor="first_name">Imię</Label>
                 <Input
-                  id="full_name"
-                  value={formData.full_name}
+                  id="first_name"
+                  value={formData.first_name}
                   onChange={(e) =>
-                    setFormData({ ...formData, full_name: e.target.value })
+                    setFormData({ ...formData, first_name: e.target.value })
                   }
-                  placeholder="Jan Kowalski"
+                  placeholder="Jan"
+                />
+              </div>
+              <div>
+                <Label htmlFor="last_name">Nazwisko</Label>
+                <Input
+                  id="last_name"
+                  value={formData.last_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, last_name: e.target.value })
+                  }
+                  placeholder="Kowalski"
                 />
               </div>
               <div>
@@ -366,17 +403,16 @@ export default function UsersManagementPage() {
                 <Select
                   value={formData.role}
                   onValueChange={(value: unknown) =>
-                    setFormData({ ...formData, role: value as "client" | "lawyer" | "admin" | "operator" })
+                    setFormData({ ...formData, role: value as "CLIENT" | "OPERATOR" | "ADMIN" })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="client">Klient</SelectItem>
-                    <SelectItem value="lawyer">Prawnik</SelectItem>
-                    <SelectItem value="operator">Operator</SelectItem>
-                    <SelectItem value="admin">Administrator</SelectItem>
+                    <SelectItem value="CLIENT">Klient</SelectItem>
+                    <SelectItem value="OPERATOR">Operator</SelectItem>
+                    <SelectItem value="ADMIN">Administrator</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -489,10 +525,9 @@ export default function UsersManagementPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Wszystkie role</SelectItem>
-                <SelectItem value="client">Klienci</SelectItem>
-                <SelectItem value="lawyer">Prawnicy</SelectItem>
-                <SelectItem value="operator">Operatorzy</SelectItem>
-                <SelectItem value="admin">Administratorzy</SelectItem>
+                <SelectItem value="CLIENT">Klienci</SelectItem>
+                <SelectItem value="OPERATOR">Operatorzy</SelectItem>
+                <SelectItem value="ADMIN">Administratorzy</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -524,7 +559,6 @@ export default function UsersManagementPage() {
                 <TableHead>Użytkownik</TableHead>
                 <TableHead>Rola</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Kancelaria</TableHead>
                 <TableHead>Data rejestracji</TableHead>
                 <TableHead>Ostatnie logowanie</TableHead>
                 <TableHead className="text-right">Akcje</TableHead>
@@ -536,17 +570,14 @@ export default function UsersManagementPage() {
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar_url || undefined} />
+                        <AvatarImage src={undefined} />
                         <AvatarFallback>
-                          {user.full_name
-                            ?.split(" ")
-                            .map((n) => n[0])
-                            .join("") || user.email[0].toUpperCase()}
+                          {user.first_name?.[0] || ''}{user.last_name?.[0] || ''}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="font-medium">
-                          {user.full_name || "Brak imienia"}
+                          {`${user.first_name || ''} ${user.last_name || ''}`.trim() || "Brak imienia"}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {user.email}
@@ -569,16 +600,6 @@ export default function UsersManagementPage() {
                     <Badge variant={user.is_active ? "default" : "secondary"}>
                       {user.is_active ? "Aktywny" : "Nieaktywny"}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {user.law_firm ? (
-                      <div className="flex items-center">
-                        <Building className="h-4 w-4 mr-1 text-muted-foreground" />
-                        {user.law_firm.name}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center text-sm text-muted-foreground">
