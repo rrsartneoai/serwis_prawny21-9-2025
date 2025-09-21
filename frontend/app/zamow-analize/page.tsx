@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import {
@@ -17,6 +19,9 @@ import {
   AlertCircle,
   ArrowLeft,
   CreditCard,
+  Tag,
+  Gift,
+  Percent,
 } from "lucide-react";
 
 export default function ZamowAnalizePage() {
@@ -24,6 +29,9 @@ export default function ZamowAnalizePage() {
   const [files, setFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
   const [selectedPackage, setSelectedPackage] = useState("standard");
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<{code: string, discount: number, type: 'percent' | 'amount'} | null>(null);
+  const [promoMessage, setPromoMessage] = useState("");
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -41,12 +49,16 @@ export default function ZamowAnalizePage() {
       id: "basic",
       name: "Analiza Podstawowa",
       price: 39,
+      originalPrice: 49,
       time: "48h",
       features: [
         "Analiza dokumentu",
-        "Podstawowe wskazówki",
+        "Podstawowe wskazówki prawne",
         "Odpowiedź przez email",
+        "Podsumowanie prawne",
       ],
+      badge: "OSZCZĘDŹ 10 ZŁ",
+      badgeColor: "bg-green-600",
     },
     {
       id: "standard",
@@ -54,10 +66,11 @@ export default function ZamowAnalizePage() {
       price: 59,
       time: "24h",
       features: [
-        "Szczegółowa analiza",
+        "Szczegółowa analiza prawna",
         "Konkretne wskazówki działania",
         "Propozycje pism do sporządzenia",
-        "Konsultacja telefoniczna",
+        "Konsultacja telefoniczna (15 min)",
+        "Terminarz działań prawnych",
       ],
       popular: true,
     },
@@ -67,13 +80,75 @@ export default function ZamowAnalizePage() {
       price: 89,
       time: "12h",
       features: [
-        "Ekspresowa analiza",
-        "Pełna strategia prawna",
-        "Wszystkie możliwe pisma",
-        "Konsultacja + wsparcie",
+        "Ekspresowa analiza prawna",
+        "Pełna strategia obrony",
+        "Wszystkie możliwe pisma i wnioski",
+        "Konsultacja telefoniczna (30 min)",
+        "Analiza ryzyk prawnych",
+        "Wsparcie do 7 dni",
       ],
     },
+    {
+      id: "express",
+      name: "Analiza Express",
+      price: 129,
+      time: "6h",
+      features: [
+        "Natychmiastowa analiza (do 6h)",
+        "Priorytetowe traktowanie",
+        "Kompleksowa strategia prawna",
+        "Nieograniczona konsultacja (48h)",
+        "Przygotowanie wszystkich pism",
+        "Dedykowany prawnik",
+        "Wsparcie weekendowe",
+      ],
+      badge: "NAJSZYBSZA",
+      badgeColor: "bg-red-600",
+    },
   ];
+
+  // Sample promo codes for demo
+  const promoCodes = {
+    "PRAWNIK10": { discount: 10, type: 'percent' as const, description: "10% zniżki" },
+    "NOWY2025": { discount: 15, type: 'amount' as const, description: "15 zł zniżki" },
+    "EXPRESS50": { discount: 50, type: 'amount' as const, description: "50 zł zniżki na Express" },
+    "WEEKEND20": { discount: 20, type: 'percent' as const, description: "20% zniżki weekendowa" },
+  };
+
+  const applyPromoCode = () => {
+    const upperCode = promoCode.toUpperCase();
+    if (promoCodes[upperCode as keyof typeof promoCodes]) {
+      const promo = promoCodes[upperCode as keyof typeof promoCodes];
+      setAppliedDiscount({
+        code: upperCode,
+        discount: promo.discount,
+        type: promo.type
+      });
+      setPromoMessage(`✓ Kod rabatowy zastosowany: ${promo.description}`);
+    } else {
+      setAppliedDiscount(null);
+      setPromoMessage("❌ Nieprawidłowy kod rabatowy");
+    }
+  };
+
+  const removePromoCode = () => {
+    setAppliedDiscount(null);
+    setPromoCode("");
+    setPromoMessage("");
+  };
+
+  const calculateFinalPrice = () => {
+    const selectedPkg = packages.find(pkg => pkg.id === selectedPackage);
+    if (!selectedPkg || !appliedDiscount) return selectedPkg?.price || 0;
+
+    const basePrice = selectedPkg.price;
+    if (appliedDiscount.type === 'percent') {
+      const discountAmount = basePrice * (appliedDiscount.discount / 100);
+      return parseFloat((basePrice - discountAmount).toFixed(2));
+    } else {
+      return Math.max(0, basePrice - appliedDiscount.discount);
+    }
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(event.target.files || []);
@@ -156,12 +231,15 @@ export default function ZamowAnalizePage() {
       const { casesApi } = await import("@/lib/api/cases");
       const selectedPkg = packages.find(pkg => pkg.id === selectedPackage);
       
+      const finalPrice = appliedDiscount ? calculateFinalPrice() : selectedPkg?.price;
+      
       const result = await casesApi.createCase({
         title: `Analiza ${selectedPkg?.name || 'dokumentów'} - ${new Date().toLocaleDateString()}`,
         description: description || `Zamówiona analiza w pakiecie ${selectedPkg?.name}`,
         client_notes: description,
         package_type: selectedPackage,
-        package_price: selectedPkg?.price,
+        package_price: finalPrice,
+        promo_code: appliedDiscount?.code,
         files: files,
       });
 
@@ -171,10 +249,16 @@ export default function ZamowAnalizePage() {
       }
 
       if (result.case) {
-        // Store case ID for payment
+        // Store case ID and promo code for payment
         localStorage.setItem('pendingCaseId', result.case.id);
-        // Redirect to payment
-        window.location.href = `/platnosc?caseId=${result.case.id}&amount=${selectedPkg?.price}`;
+        if (appliedDiscount?.code) {
+          localStorage.setItem('appliedPromoCode', appliedDiscount.code);
+          console.log('Saved promo code to localStorage:', appliedDiscount.code);
+        } else {
+          localStorage.removeItem('appliedPromoCode');
+        }
+        // Redirect to payment with final price (including discount)
+        window.location.href = `/platnosc?caseId=${result.case.id}&amount=${finalPrice}`;
       }
     } catch (error) {
       alert(`Wystąpił błąd: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
@@ -345,13 +429,27 @@ export default function ZamowAnalizePage() {
                             </Badge>
                           </div>
                         )}
+                        {pkg.badge && !pkg.popular && (
+                          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                            <Badge className={`${pkg.badgeColor} text-white`}>
+                              {pkg.badge}
+                            </Badge>
+                          </div>
+                        )}
 
                         <CardContent className="p-6 text-center">
                           <h3 className="text-lg font-semibold mb-2">
                             {pkg.name}
                           </h3>
-                          <div className="text-3xl font-bold text-red-600 mb-2">
-                            {pkg.price} zł
+                          <div className="mb-2">
+                            {pkg.originalPrice && (
+                              <div className="text-lg line-through text-gray-400 mb-1">
+                                {pkg.originalPrice} zł
+                              </div>
+                            )}
+                            <div className="text-3xl font-bold text-red-600">
+                              {pkg.price} zł
+                            </div>
                           </div>
                           <div className="text-sm text-gray-500 mb-4">
                             Realizacja: {pkg.time}
@@ -372,6 +470,70 @@ export default function ZamowAnalizePage() {
                 </CardContent>
               </Card>
 
+              {/* Promo Code Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Gift className="mr-2 h-5 w-5" />
+                    Kod rabatowy
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!appliedDiscount ? (
+                    <div className="space-y-4">
+                      <div className="flex space-x-2">
+                        <Input
+                          placeholder="Wprowadź kod rabatowy"
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button 
+                          onClick={applyPromoCode}
+                          variant="outline"
+                          disabled={!promoCode.trim()}
+                        >
+                          <Tag className="mr-2 h-4 w-4" />
+                          Zastosuj
+                        </Button>
+                      </div>
+                      {promoMessage && (
+                        <div className={`text-sm ${promoMessage.startsWith('✓') ? 'text-green-600' : 'text-red-600'}`}>
+                          {promoMessage}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-500">
+                        💡 <strong>Dostępne kody:</strong> PRAWNIK10, NOWY2025, EXPRESS50, WEEKEND20
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
+                        <div className="flex items-center">
+                          <Percent className="mr-2 h-4 w-4 text-green-600" />
+                          <span className="font-medium text-green-800">
+                            Kod {appliedDiscount.code} zastosowany
+                          </span>
+                        </div>
+                        <Button 
+                          onClick={removePromoCode}
+                          size="sm"
+                          variant="ghost"
+                          className="text-green-800 hover:text-green-900"
+                        >
+                          Usuń
+                        </Button>
+                      </div>
+                      <div className="text-sm text-green-600">
+                        Oszczędzasz: {appliedDiscount.type === 'percent' 
+                          ? `${appliedDiscount.discount}%` 
+                          : `${appliedDiscount.discount} zł`}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <div className="flex space-x-4">
                 <Button
                   variant="outline"
@@ -381,7 +543,7 @@ export default function ZamowAnalizePage() {
                   Wstecz
                 </Button>
                 <Button onClick={handleNext} className="flex-1">
-                  Dalej - Płatność
+                  Dalej - Płatność {appliedDiscount ? `(${calculateFinalPrice()} zł)` : ''}
                 </Button>
               </div>
             </div>
@@ -413,14 +575,26 @@ export default function ZamowAnalizePage() {
                         <span>Liczba dokumentów:</span>
                         <span>{files.length}</span>
                       </div>
+                      {appliedDiscount && (
+                        <div className="flex justify-between text-sm text-gray-500 line-through">
+                          <span>Cena przed rabatem:</span>
+                          <span>{packages.find((p) => p.id === selectedPackage)?.price} zł</span>
+                        </div>
+                      )}
+                      {appliedDiscount && (
+                        <div className="flex justify-between text-sm text-green-600">
+                          <span>Rabat ({appliedDiscount.code}):</span>
+                          <span>
+                            -{appliedDiscount.type === 'percent' 
+                              ? `${appliedDiscount.discount}%` 
+                              : `${appliedDiscount.discount} zł`}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between font-medium text-lg border-t pt-2">
                         <span>Do zapłaty:</span>
                         <span className="text-red-600">
-                          {
-                            packages.find((p) => p.id === selectedPackage)
-                              ?.price
-                          }{" "}
-                          zł
+                          {appliedDiscount ? calculateFinalPrice() : packages.find((p) => p.id === selectedPackage)?.price} zł
                         </span>
                       </div>
                     </div>

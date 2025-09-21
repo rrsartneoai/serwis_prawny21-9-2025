@@ -21,15 +21,19 @@ export default function AnalizaDokumentowPage() {
       title: "Nakaz Zapłaty",
       description:
         "Analiza formalnej poprawności nakazu zapłaty i możliwości obrony",
-      price: "49 zł",
+      price: "59 zł",
+      originalPrice: "69 zł",
       time: "24h",
       popular: true,
+      badge: "PROMOCJA",
+      badgeColor: "bg-red-600",
       features: [
         "Sprawdzenie poprawności formalnej",
         "Analiza podstaw prawnych roszczenia",
         "Ocena możliwości złożenia sprzeciwu",
         "Wskazanie terminów procesowych",
         "Propozycje działań prawnych",
+        "Wzór sprzeciwu",
       ],
     },
     {
@@ -44,6 +48,7 @@ export default function AnalizaDokumentowPage() {
         "Sprawdzenie procedury egzekucyjnej",
         "Możliwości złożenia skargi",
         "Ochrona majątku przed zajęciem",
+        "Strategia postępowania",
       ],
     },
     {
@@ -58,6 +63,7 @@ export default function AnalizaDokumentowPage() {
         "Identyfikacja słabych punktów",
         "Strategia obrony procesowej",
         "Przygotowanie odpowiedzi na pozew",
+        "Wzór odpowiedzi na pozew",
       ],
     },
     {
@@ -72,6 +78,41 @@ export default function AnalizaDokumentowPage() {
         "Możliwości negocjacji ugody",
         "Przygotowanie odpowiedzi",
         "Strategia dalszego postępowania",
+        "Wzór odpowiedzi",
+      ],
+    },
+    {
+      title: "Analiza Express",
+      description: "Natychmiastowa analiza dowolnego dokumentu prawnego",
+      price: "129 zł",
+      time: "6h",
+      badge: "NAJSZYBSZA",
+      badgeColor: "bg-orange-600",
+      features: [
+        "Analiza dowolnego dokumentu",
+        "Priorytetowe traktowanie",
+        "Dostępna 24/7",
+        "Wsparcie weekendowe",
+        "Dedykowany prawnik",
+        "Nieograniczona konsultacja 48h",
+        "Wszystkie potrzebne wzory",
+      ],
+    },
+    {
+      title: "Pakiet Biznesowy",
+      description: "Kompleksowa analiza dla firm i przedsiębiorców",
+      price: "199 zł",
+      time: "24h",
+      badge: "DLA FIRM",
+      badgeColor: "bg-blue-600",
+      features: [
+        "Analiza umów B2B",
+        "Ocena ryzyka biznesowego", 
+        "Strategia negocjacyjna",
+        "Wsparcie prawnika biznesowego",
+        "Analiza podatkowa",
+        "Dokumenty korporacyjne",
+        "Wsparcie przez 14 dni",
       ],
     },
   ];
@@ -218,6 +259,13 @@ export default function AnalizaDokumentowPage() {
                       </Badge>
                     </div>
                   )}
+                  {doc.badge && !doc.popular && (
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                      <Badge className={`${doc.badgeColor} text-white font-medium`}>
+                        {doc.badge}
+                      </Badge>
+                    </div>
+                  )}
 
                   <CardHeader>
                     <div className="flex justify-between items-start mb-4">
@@ -228,6 +276,11 @@ export default function AnalizaDokumentowPage() {
                         <p className="text-gray-600 mt-2">{doc.description}</p>
                       </div>
                       <div className="text-right">
+                        {doc.originalPrice && (
+                          <div className="text-lg line-through text-gray-400 mb-1">
+                            {doc.originalPrice}
+                          </div>
+                        )}
                         <div className="text-2xl font-bold text-blue-600">
                           {doc.price}
                         </div>

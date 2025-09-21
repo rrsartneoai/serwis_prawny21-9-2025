@@ -25,6 +25,7 @@ class PackageType(enum.Enum):
     STANDARD = "standard"
     PREMIUM = "premium"
     EXPRESS = "express"
+    BUSINESS = "business"
 
 class DocumentType(enum.Enum):
     PDF = "pdf"

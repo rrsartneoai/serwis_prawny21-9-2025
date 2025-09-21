@@ -77,6 +77,7 @@ export interface CreateCaseData {
   client_agreement?: string;
   package_type?: string;
   package_price?: number;
+  promo_code?: string;
   files?: File[];
 }
 
@@ -120,6 +121,10 @@ class CasesApi {
       
       if (data.package_price !== undefined) {
         formData.append('package_price', data.package_price.toString());
+      }
+      
+      if (data.promo_code) {
+        formData.append('promo_code', data.promo_code);
       }
       
       // Add files

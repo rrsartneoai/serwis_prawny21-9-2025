@@ -22,6 +22,7 @@ class PaymentCreate(BaseModel):
     payment_type: PaymentType = PaymentType.ANALYSIS
     provider: PaymentProvider = PaymentProvider.PAYU
     description: Optional[str] = None
+    promo_code: Optional[str] = None
 
 class PaymentResponse(BaseModel):
     id: int
@@ -79,34 +80,81 @@ async def create_payment(
     
     # Server-side amount validation - calculate based on case package
     from app.models.case import PackageType
-    server_amount = None
-    if case.package_type == PackageType.BASIC:
-        server_amount = 39.0
-    elif case.package_type == PackageType.STANDARD:
-        server_amount = 59.0
-    elif case.package_type == PackageType.PREMIUM:
-        server_amount = 89.0
-    elif case.package_type == PackageType.EXPRESS:
-        server_amount = 129.0  # Express pricing
-    else:
-        server_amount = 59.0  # default to standard
     
-    # Validate client amount against server calculation
-    if abs(payment_data.amount - server_amount) > 0.01:
+    # Updated pricing to match frontend packages
+    package_pricing = {
+        PackageType.BASIC: 39.0,      # Basic analysis
+        PackageType.STANDARD: 59.0,   # Standard analysis  
+        PackageType.PREMIUM: 89.0,    # Premium analysis
+        PackageType.EXPRESS: 129.0,   # Express analysis (6h)
+        PackageType.BUSINESS: 199.0,  # Business package for companies
+    }
+    
+    # Require valid package type - no fallback
+    if case.package_type not in package_pricing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid amount. Expected {server_amount}, got {payment_data.amount}"
+            detail=f"Invalid package type: {case.package_type}"
+        )
+    
+    base_amount = package_pricing[case.package_type]
+    final_amount = base_amount
+    applied_promo = None
+    
+    # Apply promo code if provided
+    if payment_data.promo_code:
+        promo_code = payment_data.promo_code.upper().strip()
+        
+        # Sample promo codes with package restrictions
+        promo_codes = {
+            "PRAWNIK10": {"discount": 10, "type": "percent", "description": "10% zniżki", "allowed_packages": None},
+            "NOWY2025": {"discount": 15, "type": "amount", "description": "15 zł zniżki", "allowed_packages": None},
+            "EXPRESS50": {"discount": 50, "type": "amount", "description": "50 zł zniżki na Express", "allowed_packages": [PackageType.EXPRESS]},
+            "WEEKEND20": {"discount": 20, "type": "percent", "description": "20% zniżki weekendowa", "allowed_packages": None},
+        }
+        
+        if promo_code in promo_codes:
+            promo = promo_codes[promo_code]
+            
+            # Check package restrictions
+            if promo["allowed_packages"] and case.package_type not in promo["allowed_packages"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Promo code {promo_code} is not valid for package {case.package_type.value}"
+                )
+            
+            if promo["type"] == "percent":
+                discount_amount = base_amount * (promo["discount"] / 100)
+                final_amount = base_amount - discount_amount
+            else:  # amount
+                final_amount = max(0, base_amount - promo["discount"])
+            
+            applied_promo = {
+                "code": promo_code,
+                "discount": promo["discount"],
+                "type": promo["type"],
+                "description": promo["description"]
+            }
+            
+            final_amount = round(final_amount, 2)
+    
+    # Validate client amount against server calculation (with discount)
+    if abs(payment_data.amount - final_amount) > 0.01:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid amount. Expected {final_amount} (base: {base_amount}), got {payment_data.amount}"
         )
 
     # Create payment record with server-validated amount
     payment = Payment(
         user_id=current_user.id,
         case_id=payment_data.case_id,
-        amount=server_amount,  # Use server-calculated amount
+        amount=final_amount,  # Use server-calculated amount with discount
         payment_type=payment_data.payment_type,
         provider=payment_data.provider,
         description=payment_data.description or f"Analiza dokumentów - sprawa #{payment_data.case_id}",
-        status=PaymentStatus.PENDING
+        status=PaymentStatus.PENDING,
+        applied_promotion_code=applied_promo["code"] if applied_promo else None
     )
     
     db.add(payment)

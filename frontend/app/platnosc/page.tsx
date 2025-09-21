@@ -77,12 +77,16 @@ export default function PlatnoscPage() {
       // Create payment via API
       const { paymentsApi } = await import("@/lib/api/payments");
       
+      // Get promo code from localStorage if available
+      const appliedPromoCode = localStorage.getItem('appliedPromoCode');
+      
       const paymentResult = await paymentsApi.createPayment({
         case_id: caseData.id,
         amount: parseFloat(amount),
         payment_type: 'analysis',
         provider: paymentMethod,
-        description: `Analiza dokumentów - sprawa #${caseData.id}`
+        description: `Analiza dokumentów - sprawa #${caseData.id}`,
+        promo_code: appliedPromoCode || undefined
       });
 
       if (paymentResult.error) {
@@ -99,6 +103,10 @@ export default function PlatnoscPage() {
           return;
         }
 
+        // Clear stored promo code after successful payment
+        localStorage.removeItem('appliedPromoCode');
+        localStorage.removeItem('pendingCaseId');
+        
         // Show success and redirect
         alert('Płatność zakończona pomyślnie! Przekierowanie do panelu klienta...');
         router.push('/panel-klienta');

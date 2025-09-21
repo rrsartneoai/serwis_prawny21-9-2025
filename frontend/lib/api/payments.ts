@@ -21,6 +21,7 @@ export interface PaymentCreate {
   payment_type?: 'analysis' | 'legal_document' | 'package';
   provider?: 'PAYU' | 'STRIPE' | 'PAYPAL' | 'BANK_TRANSFER';
   description?: string;
+  promo_code?: string;
 }
 
 export interface PaymentResponse {
