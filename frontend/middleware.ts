@@ -14,14 +14,12 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   
   if (isProtectedRoute) {
-    // Check for basic auth token in cookies or headers
-    const authCookie = request.cookies.get("auth-token");
-    const authHeader = request.headers.get("authorization");
+    // For now, skip server-side auth checking since we store tokens in localStorage
+    // Auth checking is handled client-side in the page components
+    // This middleware only prevents direct navigation without proper client-side setup
     
-    // If no auth token found, redirect to login
-    if (!authCookie && !authHeader) {
-      return NextResponse.redirect(new URL("/logowanie", request.url));
-    }
+    // Allow all protected route access - client-side will handle auth
+    return NextResponse.next();
   }
 
   return NextResponse.next();

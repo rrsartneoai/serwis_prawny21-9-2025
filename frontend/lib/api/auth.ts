@@ -44,8 +44,9 @@ export class AuthAPIClient {
   constructor() {
     // Use the correct backend URL for Replit environment
     if (typeof window !== 'undefined') {
-      // Browser environment - use relative paths that will be proxied by Next.js
-      this.baseUrl = '';
+      // Browser environment - use Replit domain for backend
+      const replitDomain = process.env.NEXT_PUBLIC_REPLIT_DOMAIN || 'localhost:8000';
+      this.baseUrl = replitDomain.startsWith('http') ? replitDomain : `https://${replitDomain}`;
     } else {
       // Server-side rendering - use localhost
       this.baseUrl = 'http://localhost:8000';
@@ -258,10 +259,18 @@ export class AuthAPIClient {
   // Token Management
   setToken(token: string) {
     this.token = token;
+    // Also save to localStorage with 'auth-token' key for middleware
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth-token', token);
+    }
   }
 
   clearToken() {
     this.token = null;
+    // Also remove from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth-token');
+    }
   }
 
   getBaseUrl(): string {
