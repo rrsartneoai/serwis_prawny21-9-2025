@@ -44,11 +44,11 @@ export class AuthAPIClient {
   constructor() {
     // Use the correct backend URL for Replit environment
     if (typeof window !== 'undefined') {
-      // Browser environment - use relative paths for same domain
-      this.baseUrl = '/api';
+      // Browser environment - use relative paths that will be proxied by Next.js
+      this.baseUrl = '';
     } else {
       // Server-side rendering - use localhost
-      this.baseUrl = 'http://localhost:8000/api';
+      this.baseUrl = 'http://localhost:8000';
     }
   }
 

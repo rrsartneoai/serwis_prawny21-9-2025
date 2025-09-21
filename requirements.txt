@@ -58,3 +58,5 @@ python-jose[cryptography]
 SQLAlchemy
 twilio
 uvicorn
+flask-login
+oauthlib
