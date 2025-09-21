@@ -42,34 +42,8 @@ export class AuthAPIClient {
   private token: string | null = null;
 
   constructor() {
-    // Use the backend URL - detect Replit environment
-    if (typeof window !== 'undefined') {
-      // Check for environment variable first
-      if (process.env.NEXT_PUBLIC_API_BASE_URL) {
-        this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-        return;
-      }
-
-      const hostname = window.location.hostname;
-      const port = window.location.port;
-      
-      if (hostname.includes('replit.dev') || hostname.includes('replit.co')) {
-        // In Replit environment, replace frontend port with backend port 8000
-        // Replit URLs are like: abcd-3000-xyz.replit.dev -> abcd-8000-xyz.replit.dev
-        if (port && hostname.includes(`-${port}-`)) {
-          this.baseUrl = `https://${hostname.replace(`-${port}-`, '-8000-')}`;
-        } else {
-          // Fallback: assume standard pattern and replace common frontend ports
-          this.baseUrl = `https://${hostname.replace('-3000-', '-8000-').replace('-5000-', '-8000-')}`;
-        }
-      } else if (hostname === 'localhost') {
-        this.baseUrl = 'http://localhost:8000';
-      } else {
-        this.baseUrl = `https://${hostname}:8000`;
-      }
-    } else {
-      this.baseUrl = 'http://localhost:8000';
-    }
+    // Use localhost backend since both services are in the same Replit environment
+    this.baseUrl = 'http://localhost:8000';
   }
 
   async makeRequest<T>(
