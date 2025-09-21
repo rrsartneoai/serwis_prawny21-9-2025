@@ -19,6 +19,7 @@ import {
   Scale,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function HomePage() {
   const services = [
@@ -101,11 +102,21 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="relative">
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-                  <h3 className="text-2xl font-bold mb-4 text-center">
-                    Express Analysis
-                  </h3>
-                  <div className="space-y-4">
+                <div className="flex justify-center items-center">
+                  <div className="relative w-full max-w-md">
+                    <Image 
+                      src="/legal-gavel.png" 
+                      alt="Młotek sędziowski z efektami cyfrowymi - symbol sprawiedliwości i nowoczesnych technologii prawnych" 
+                      width={400}
+                      height={300}
+                      priority
+                      sizes="(min-width: 1024px) 28rem, 100vw"
+                      className="w-full h-auto object-contain drop-shadow-2xl rounded-2xl"
+                    />
+                  </div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 mt-6">
+                  <div className="space-y-3">
                     <div className="flex items-center space-x-3">
                       <CheckCircle className="h-5 w-5 text-green-300" />
                       <span>Analiza w 24h</span>
