@@ -28,6 +28,8 @@ export default function NewCaseForm({ onSuccess }: NewCaseFormProps) {
     title: "",
     description: "",
     clientNotes: "",
+    clientContext: "",
+    clientAgreement: "",
   });
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,6 +174,8 @@ export default function NewCaseForm({ onSuccess }: NewCaseFormProps) {
         title: formData.title,
         description: formData.description,
         client_notes: formData.clientNotes,
+        client_context: formData.clientContext,
+        client_agreement: formData.clientAgreement,
         files: files,
       });
 
@@ -192,6 +196,8 @@ export default function NewCaseForm({ onSuccess }: NewCaseFormProps) {
         title: "",
         description: "",
         clientNotes: "",
+        clientContext: "",
+        clientAgreement: "",
       });
       setFiles([]);
       setUploadProgress(0);
@@ -251,8 +257,52 @@ export default function NewCaseForm({ onSuccess }: NewCaseFormProps) {
           value={formData.description}
           onChange={handleInputChange}
           rows={4}
-          placeholder="Opisz krótko swoją sytuację prawną i czego oczekujesz od analizy."
+          placeholder="Opisz krótko swoją sytuację prawną..."
         />
+      </div>
+
+      {/* Client Context - What client expects */}
+      <div>
+        <Label htmlFor="clientContext">
+          Czego oczekujesz od nas? *
+          <span className="text-sm font-normal text-gray-600 block mt-1">
+            Opisz jak najdokładniej czego oczekujesz od analizy i dalszych działań prawnych
+          </span>
+        </Label>
+        <Textarea
+          id="clientContext"
+          name="clientContext"
+          value={formData.clientContext}
+          onChange={handleInputChange}
+          rows={4}
+          placeholder="Np. Chcę sprawdzić czy nakaz zapłaty jest uzasadniony, czy mogę się odwołać, jakie mam opcje obrony, czy grozi mi egzekucja..."
+          className="mt-2"
+        />
+        <div className="mt-2 text-xs text-gray-500">
+          💡 <strong>Podpowiedzi:</strong> Opisz swoje obawy, pytania, czy chcesz się odwołać, negocjować, czy szukasz innych rozwiązań.
+        </div>
+      </div>
+
+      {/* Client Agreement */}
+      <div>
+        <Label htmlFor="clientAgreement">
+          Czy zgadzasz się z treścią otrzymanego dokumentu? *
+          <span className="text-sm font-normal text-gray-600 block mt-1">
+            Wyjaśnij swoje stanowisko wobec dokumentu i dlaczego tak uważasz
+          </span>
+        </Label>
+        <Textarea
+          id="clientAgreement"
+          name="clientAgreement"
+          value={formData.clientAgreement}
+          onChange={handleInputChange}
+          rows={4}
+          placeholder="Np. Nie zgadzam się z żądaniem, ponieważ... / Częściowo się zgadzam, ale... / Zgadzam się, ale potrzebuję pomocy w..."
+          className="mt-2"
+        />
+        <div className="mt-2 text-xs text-gray-500">
+          💡 <strong>Podpowiedzi:</strong> Czy kwota jest prawidłowa? Czy terminz były zachowane? Czy masz dowody przeciwne? Czy były nieprawidłowości w postępowaniu?
+        </div>
       </div>
 
       {/* Document Upload */}

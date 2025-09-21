@@ -32,6 +32,8 @@ export interface Case {
   description?: string;
   client_notes?: string;
   clientNotes?: string; // Alias for client_notes
+  client_context?: string;
+  client_agreement?: string;
   status: "draft" | "submitted" | "analyzing" | "analysis_ready" | "completed" | "cancelled" | "documents_ready" | "new" | "rejected";
   package_type?: string;
   package_price?: number;
@@ -71,6 +73,8 @@ export interface CreateCaseData {
   title: string;
   description?: string;
   client_notes?: string;
+  client_context?: string;
+  client_agreement?: string;
   package_type?: string;
   package_price?: number;
   files?: File[];
@@ -100,6 +104,14 @@ class CasesApi {
       
       if (data.client_notes) {
         formData.append('client_notes', data.client_notes);
+      }
+      
+      if (data.client_context) {
+        formData.append('client_context', data.client_context);
+      }
+      
+      if (data.client_agreement) {
+        formData.append('client_agreement', data.client_agreement);
       }
       
       if (data.package_type) {
@@ -137,6 +149,8 @@ class CasesApi {
       description: backendCase.description,
       client_notes: backendCase.client_notes,
       clientNotes: backendCase.client_notes, // Alias
+      client_context: backendCase.client_context,
+      client_agreement: backendCase.client_agreement,
       status: backendCase.status,
       package_type: backendCase.package_type,
       package_price: backendCase.package_price,

@@ -23,6 +23,8 @@ class CaseBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     client_notes: Optional[str] = None
+    client_context: Optional[str] = None  # What client expects from analysis
+    client_agreement: Optional[str] = None  # Does client agree/disagree with document
 
 class CaseCreate(CaseBase):
     package_type: Optional[Literal["basic", "standard", "premium", "express"]] = None
@@ -33,6 +35,8 @@ class CaseClientUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     client_notes: Optional[str] = None
+    client_context: Optional[str] = None
+    client_agreement: Optional[str] = None
 
 # Operator/Admin can update status and package
 class CaseOperatorUpdate(CaseClientUpdate):
@@ -49,6 +53,8 @@ class CaseInDB(CaseBase):
     status: str
     package_type: Optional[str] = None
     package_price: Optional[float] = None
+    client_context: Optional[str] = None
+    client_agreement: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     user_id: int

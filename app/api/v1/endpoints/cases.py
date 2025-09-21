@@ -23,6 +23,8 @@ async def create_case(
     title: str = Form(...),
     description: str = Form(None),
     client_notes: str = Form(None),
+    client_context: str = Form(None),
+    client_agreement: str = Form(None),
     package_type: str = Form(None),
     package_price: float = Form(None),
     files: List[UploadFile] = File([]),
@@ -54,15 +56,21 @@ async def create_case(
                     continue  # Skip empty files
                 
                 # Validate file type by content-type and extension
-                allowed_types = ['application/pdf', 'image/jpeg', 'image/png']
-                allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
+                allowed_types = [
+                    'application/pdf', 
+                    'image/jpeg', 
+                    'image/png',
+                    'application/msword',  # .doc
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'  # .docx
+                ]
+                allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
                 
                 file_extension = os.path.splitext(file.filename)[1].lower()
                 
                 if file.content_type not in allowed_types or file_extension not in allowed_extensions:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"File type not allowed. Allowed types: PDF, JPG, PNG"
+                        detail=f"File type not allowed. Allowed types: PDF, DOC, DOCX, JPG, PNG"
                     )
                 
                 # Validate file size (10MB max)
@@ -101,6 +109,8 @@ async def create_case(
             title=title,
             description=description,
             client_notes=client_notes,
+            client_context=client_context,
+            client_agreement=client_agreement,
             package_type=package_enum,
             package_price=package_price,
             user_id=current_user.id,
@@ -121,7 +131,12 @@ async def create_case(
             uploaded_files_to_cleanup.append(file_path)
             
             # Create document record
-            file_type = "pdf" if file_data['content_type'] == "application/pdf" else "image"
+            if file_data['content_type'] == "application/pdf":
+                file_type = "pdf"
+            elif file_data['content_type'] in ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+                file_type = "doc"
+            else:
+                file_type = "image"
             db_document = Document(
                 filename=unique_filename,
                 original_filename=file_data['filename'],
