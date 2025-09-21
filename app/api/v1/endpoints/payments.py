@@ -11,7 +11,7 @@ from app.db.database import get_db
 from app.models.payment import Payment, PaymentStatus, PaymentProvider, PaymentType
 from app.models.user import User
 from app.models.case import Case
-from app.api.v1.endpoints.auth import get_current_user
+from app.api.v1.endpoints.auth import get_verified_user
 
 router = APIRouter()
 
@@ -49,7 +49,7 @@ class PaymentUpdateStatus(BaseModel):
 @router.post("/", response_model=PaymentResponse)
 async def create_payment(
     payment_data: PaymentCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Create a new payment for a case"""
@@ -183,7 +183,7 @@ async def create_payment(
 
 @router.get("/", response_model=List[PaymentResponse])
 async def get_user_payments(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Get all payments for current user"""
@@ -197,7 +197,7 @@ async def get_user_payments(
 @router.get("/{payment_id}", response_model=PaymentResponse)
 async def get_payment(
     payment_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Get specific payment details"""
@@ -314,7 +314,7 @@ def get_client_panel_url() -> str:
 @router.post("/simulate-success/{payment_id}")
 async def simulate_payment_success(
     payment_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Simulate successful payment (DEVELOPMENT ONLY - for testing)"""
