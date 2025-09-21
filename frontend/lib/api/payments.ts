@@ -40,7 +40,7 @@ export const paymentsApi = {
    */
   async createPayment(paymentData: PaymentCreate): Promise<PaymentResponse> {
     try {
-      const response = await authAPI.makeRequest('POST', '/payments', paymentData, true) as Response;
+      const response = await authAPI.makeRequest('POST', '/payments/', paymentData, true) as Response;
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -64,7 +64,7 @@ export const paymentsApi = {
    */
   async getUserPayments(): Promise<PaymentsResponse> {
     try {
-      const response = await authAPI.makeRequest('GET', '/payments', undefined, true) as Response;
+      const response = await authAPI.makeRequest('GET', '/payments/', undefined, true) as Response;
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -88,7 +88,7 @@ export const paymentsApi = {
    */
   async getPayment(paymentId: number): Promise<PaymentResponse> {
     try {
-      const response = await authAPI.makeRequest('GET', `/payments/${paymentId}`, undefined, true) as Response;
+      const response = await authAPI.makeRequest('GET', `/payments/${paymentId}/`, undefined, true) as Response;
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

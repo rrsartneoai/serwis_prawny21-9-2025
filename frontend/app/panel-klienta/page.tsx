@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { casesApi, type Case } from "@/lib/api/cases";
+import { paymentsApi, type Payment } from "@/lib/api/payments";
+import { notificationsApi, type Notification } from "@/lib/api/notifications";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -34,6 +36,9 @@ export default function PanelKlientaPage() {
   const [activeTab, setActiveTab] = useState("sprawy");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cases, setCases] = useState<Case[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -46,26 +51,60 @@ export default function PanelKlientaPage() {
     }
   }, [isAuthenticated, router]);
 
-  // Load cases from API
+  // Load data from APIs
   useEffect(() => {
-    const loadCases = async () => {
+    const loadData = async () => {
       if (!isAuthenticated) return;
       
       setLoading(true);
       setError(null);
       
-      const response = await casesApi.getCases();
-      
-      if (response.error) {
-        setError(response.error);
-      } else if (response.cases) {
-        setCases(response.cases);
+      try {
+        // Load all data in parallel for better performance
+        const [casesResponse, paymentsResponse, notificationsResponse, unreadResponse] = await Promise.all([
+          casesApi.getCases().catch(err => ({ error: err.message })),
+          paymentsApi.getUserPayments().catch(err => ({ error: err.message })),
+          notificationsApi.getUserNotifications().catch(err => ({ error: err.message })),
+          notificationsApi.getUnreadCount().catch(err => ({ error: err.message }))
+        ]);
+        
+        // Handle cases
+        if ('error' in casesResponse && casesResponse.error) {
+          console.error('Cases error:', casesResponse.error);
+        } else if ('cases' in casesResponse && casesResponse.cases) {
+          setCases(casesResponse.cases);
+        }
+        
+        // Handle payments  
+        if ('error' in paymentsResponse && paymentsResponse.error) {
+          console.error('Payments error:', paymentsResponse.error);
+        } else if ('payments' in paymentsResponse && paymentsResponse.payments) {
+          setPayments(paymentsResponse.payments);
+        }
+        
+        // Handle notifications
+        if ('error' in notificationsResponse && notificationsResponse.error) {
+          console.error('Notifications error:', notificationsResponse.error);
+        } else if ('notifications' in notificationsResponse && notificationsResponse.notifications) {
+          setNotifications(notificationsResponse.notifications);
+        }
+        
+        // Handle unread count
+        if ('error' in unreadResponse && unreadResponse.error) {
+          console.error('Unread count error:', unreadResponse.error);
+        } else if ('unread_count' in unreadResponse && unreadResponse.unread_count !== undefined) {
+          setUnreadCount(unreadResponse.unread_count);
+        }
+        
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        setError('Błąd ładowania danych');
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
-    loadCases();
+    loadData();
   }, [isAuthenticated]);
 
   // Add refresh function for after creating new cases
@@ -80,11 +119,37 @@ export default function PanelKlientaPage() {
     setLoading(false);
   };
 
+  const refreshPayments = async () => {
+    const response = await paymentsApi.getUserPayments();
+    if (response.payments) {
+      setPayments(response.payments);
+    }
+  };
+
+  const refreshNotifications = async () => {
+    try {
+      const [notificationsResponse, unreadResponse] = await Promise.all([
+        notificationsApi.getUserNotifications(),
+        notificationsApi.getUnreadCount()
+      ]);
+      
+      if (notificationsResponse.notifications) {
+        setNotifications(notificationsResponse.notifications);
+      }
+      
+      if (unreadResponse.unread_count !== undefined) {
+        setUnreadCount(unreadResponse.unread_count);
+      }
+    } catch (error) {
+      console.error('Failed to refresh notifications:', error);
+    }
+  };
+
   const sidebarItems = [
     { id: "sprawy", label: "Moje sprawy", icon: FileText },
     { id: "nowa-sprawa", label: "Nowa sprawa", icon: Plus },
     { id: "historia", label: "Historia płatności", icon: History },
-    { id: "wiadomosci", label: "Wiadomości", icon: MessageSquare },
+    { id: "wiadomosci", label: "Wiadomości", icon: MessageSquare, badge: unreadCount > 0 ? unreadCount : undefined },
     { id: "profil", label: "Mój profil", icon: User },
     { id: "ustawienia", label: "Ustawienia", icon: Settings },
   ];
@@ -151,14 +216,21 @@ export default function PanelKlientaPage() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors font-medium ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors font-medium ${
                     activeTab === item.id
                       ? "bg-blue-100 text-blue-700"
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
-                  <item.icon className="h-5 w-5 mr-3" />
-                  {item.label}
+                  <div className="flex items-center">
+                    <item.icon className="h-5 w-5 mr-3" />
+                    {item.label}
+                  </div>
+                  {item.badge && (
+                    <Badge className="bg-red-100 text-red-800 text-xs px-2 py-0.5">
+                      {item.badge}
+                    </Badge>
+                  )}
                 </button>
               ))}
             </nav>
@@ -424,7 +496,287 @@ export default function PanelKlientaPage() {
               </Card>
             </div>
           )}
-          {/* Additional tabs can be added here */}
+
+          {/* Payment History Section */}
+          {activeTab === "historia" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Historia płatności
+                </h1>
+                <Button onClick={refreshPayments}>
+                  Odśwież
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                {loading ? (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Ładowanie płatności...</p>
+                    </CardContent>
+                  </Card>
+                ) : payments.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-4">Nie masz jeszcze żadnych płatności</p>
+                    </CardContent>
+                  </Card>
+                ) : payments.map((payment) => (
+                  <Card key={payment.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-semibold text-lg">
+                            Płatność #{payment.id}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {new Date(payment.created_at).toLocaleDateString('pl-PL')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-xl">{payment.amount} {payment.currency}</p>
+                          <Badge className={
+                            payment.status === 'paid' ? 'bg-green-100 text-green-800' :
+                            payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            payment.status === 'failed' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }>
+                            {payment.status === 'paid' ? 'Opłacone' :
+                             payment.status === 'pending' ? 'Oczekujące' :
+                             payment.status === 'failed' ? 'Nieudane' :
+                             payment.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="text-gray-600 mb-2">{payment.description}</p>
+                      <p className="text-sm text-gray-500">Typ: {payment.payment_type}</p>
+                      {(payment as any).applied_promotion_code && (
+                        <p className="text-sm text-green-600">
+                          Promocja: {(payment as any).applied_promotion_code}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Messages Section */}
+          {activeTab === "wiadomosci" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Wiadomości
+                  {unreadCount > 0 && (
+                    <Badge className="ml-2 bg-red-100 text-red-800">
+                      {unreadCount} nowe
+                    </Badge>
+                  )}
+                </h1>
+                <Button onClick={refreshNotifications}>
+                  Odśwież
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {loading ? (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Ładowanie wiadomości...</p>
+                    </CardContent>
+                  </Card>
+                ) : notifications.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-4">Nie masz jeszcze żadnych wiadomości</p>
+                    </CardContent>
+                  </Card>
+                ) : notifications.map((notification) => (
+                  <Card 
+                    key={notification.id} 
+                    className={`hover:shadow-md transition-shadow ${!notification.read_at ? 'border-blue-200 bg-blue-50' : ''}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center">
+                          <MessageSquare className="h-4 w-4 text-blue-500 mr-2" />
+                          <h4 className="font-medium">
+                            {notification.subject || notification.template}
+                          </h4>
+                          {!notification.read_at && (
+                            <Badge className="ml-2 bg-blue-100 text-blue-800 text-xs">
+                              Nowe
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {new Date(notification.created_at).toLocaleDateString('pl-PL')}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-2">{notification.content}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">
+                          {notification.type.toUpperCase()}
+                        </span>
+                        {!notification.read_at && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                await notificationsApi.markAsRead(notification.id);
+                                await refreshNotifications();
+                              } catch (error) {
+                                console.error('Failed to mark as read:', error);
+                              }
+                            }}
+                          >
+                            Oznacz jako przeczytane
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Profile Section */}
+          {activeTab === "profil" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Mój profil
+                </h1>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informacje o koncie</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Imię i nazwisko</label>
+                      <p className="mt-1 text-gray-900">{user?.name || 'Nie podano'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Email</label>
+                      <p className="mt-1 text-gray-900">{user?.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Telefon</label>
+                      <p className="mt-1 text-gray-900">{user?.phone || 'Nie podano'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Status konta</label>
+                      <Badge className={user?.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                        {user?.is_verified ? 'Zweryfikowane' : 'Niezweryfikowane'}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 border-t">
+                    <h4 className="font-medium mb-2">Statystyki</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <p className="text-2xl font-bold text-blue-600">{cases.length}</p>
+                        <p className="text-sm text-gray-600">Liczba spraw</p>
+                      </div>
+                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                        <p className="text-2xl font-bold text-green-600">{payments.length}</p>
+                        <p className="text-sm text-gray-600">Płatności</p>
+                      </div>
+                      <div className="text-center p-3 bg-purple-50 rounded-lg">
+                        <p className="text-2xl font-bold text-purple-600">{notifications.length}</p>
+                        <p className="text-sm text-gray-600">Wiadomości</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Settings Section */}
+          {activeTab === "ustawienia" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Ustawienia
+                </h1>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ustawienia konta</CardTitle>
+                  <p className="text-gray-600">Zarządzaj swoim kontem i preferencjami</p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h4 className="font-medium mb-3">Powiadomienia</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Powiadomienia email</p>
+                          <p className="text-sm text-gray-500">Otrzymuj powiadomienia na email</p>
+                        </div>
+                        <input type="checkbox" defaultChecked className="rounded" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Powiadomienia SMS</p>
+                          <p className="text-sm text-gray-500">Otrzymuj powiadomienia SMS</p>
+                        </div>
+                        <input type="checkbox" defaultChecked className="rounded" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Newsletter</p>
+                          <p className="text-sm text-gray-500">Otrzymuj newsletter z poradami prawnymi</p>
+                        </div>
+                        <input type="checkbox" className="rounded" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-6">
+                    <h4 className="font-medium mb-3">Bezpieczeństwo</h4>
+                    <div className="space-y-3">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Zmień hasło
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start">
+                        <User className="mr-2 h-4 w-4" />
+                        Aktualizuj dane osobowe
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-6">
+                    <h4 className="font-medium mb-3">Inne</h4>
+                    <div className="space-y-3">
+                      <Button variant="outline" className="w-full justify-start">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Pobierz dane konta
+                      </Button>
+                      <Button variant="destructive" className="w-full justify-start">
+                        Usuń konto
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>
