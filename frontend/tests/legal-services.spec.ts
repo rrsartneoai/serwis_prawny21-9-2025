@@ -53,9 +53,45 @@ test.describe('Legal Services', () => {
     await page.goto('/');
     
     // Look for contact information (email, phone, address)
-    const contactInfo = page.locator('text=contact, text=kontakt, footer').first();
-    if (await contactInfo.isVisible()) {
-      await expect(contactInfo).toBeVisible();
+    const footer = page.locator('footer');
+    await expect(footer).toBeVisible({timeout: 10000});
+  });
+
+  test('should meet basic accessibility standards', async ({ page }) => {
+    await page.goto('/');
+    
+    // Wait for page to load
+    await page.waitForLoadState('domcontentloaded');
+    
+    // Check for proper heading hierarchy
+    const mainHeading = page.locator('h1').first();
+    await expect(mainHeading).toBeVisible({timeout: 10000});
+    
+    // Check for alt attributes on images
+    const images = page.locator('img');
+    const imageCount = await images.count();
+    
+    for (let i = 0; i < Math.min(imageCount, 5); i++) { // Check first 5 images
+      const img = images.nth(i);
+      if (await img.isVisible()) {
+        const alt = await img.getAttribute('alt');
+        expect(alt).not.toBeNull();
+        expect(alt).not.toBe('');
+      }
+    }
+    
+    // Check for proper form labels
+    const inputs = page.locator('input[type="email"], input[type="text"], input[type="password"]');
+    const inputCount = await inputs.count();
+    
+    for (let i = 0; i < Math.min(inputCount, 3); i++) { // Check first 3 inputs
+      const input = inputs.nth(i);
+      if (await input.isVisible()) {
+        const label = await input.getAttribute('aria-label');
+        const placeholder = await input.getAttribute('placeholder');
+        const hasLabel = label || placeholder;
+        expect(hasLabel).toBeTruthy();
+      }
     }
   });
 });

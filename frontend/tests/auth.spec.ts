@@ -5,15 +5,14 @@ test.describe('Authentication', () => {
     await page.goto('/');
     
     // Find and click login button/link
-    const loginButton = page.locator('a[href*="login"], button:has-text("Zaloguj")').first();
-    if (await loginButton.isVisible()) {
-      await loginButton.click();
-      await expect(page).toHaveURL(/login/);
-    }
+    const loginButton = page.locator('a[href*="logowanie"], button:has-text("Zaloguj")').first();
+    await expect(loginButton).toBeVisible({timeout: 10000});
+    await loginButton.click();
+    await expect(page).toHaveURL(/logowanie/);
   });
 
   test('should show login form', async ({ page }) => {
-    await page.goto('/auth/login');
+    await page.goto('/logowanie');
     
     // Check for login form elements
     await expect(page.locator('input[type="email"], input[name="email"]')).toBeVisible({timeout: 10000});
@@ -25,15 +24,14 @@ test.describe('Authentication', () => {
     await page.goto('/');
     
     // Find and click register button/link
-    const registerButton = page.locator('a[href*="register"], button:has-text("Zarejestruj")').first();
-    if (await registerButton.isVisible()) {
-      await registerButton.click();
-      await expect(page).toHaveURL(/register/);
-    }
+    const registerButton = page.locator('a[href*="rejestracja"], button:has-text("Zarejestruj")').first();
+    await expect(registerButton).toBeVisible({timeout: 10000});
+    await registerButton.click();
+    await expect(page).toHaveURL(/rejestracja/);
   });
 
   test('should show register form', async ({ page }) => {
-    await page.goto('/auth/register');
+    await page.goto('/rejestracja');
     
     // Check for register form elements
     await expect(page.locator('input[name="email"], input[type="email"]')).toBeVisible({timeout: 10000});
@@ -43,17 +41,17 @@ test.describe('Authentication', () => {
   });
 
   test('should show validation errors for empty login form', async ({ page }) => {
-    await page.goto('/auth/login');
+    await page.goto('/logowanie');
     
     // Try to submit empty form
     await page.locator('button[type="submit"], button:has-text("Zaloguj")').first().click();
     
     // Check for validation messages
-    await expect(page.locator('text=required, text=wymagane, text=pole jest wymagane').first()).toBeVisible({timeout: 5000});
+    await expect(page.locator('text=wymagane, [role="alert"], .error-message').first()).toBeVisible({timeout: 5000});
   });
 
   test('should attempt login with test credentials', async ({ page }) => {
-    await page.goto('/auth/login');
+    await page.goto('/logowanie');
     
     // Fill in test credentials
     await page.fill('input[type="email"], input[name="email"]', 'admin@test.com');
@@ -62,17 +60,15 @@ test.describe('Authentication', () => {
     // Submit form
     await page.locator('button[type="submit"], button:has-text("Zaloguj")').first().click();
     
-    // Wait for response (either success redirect or error message)
-    await page.waitForTimeout(3000);
+    // Wait for response and check result
+    await page.waitForLoadState('networkidle', {timeout: 10000});
     
-    // Check if we're redirected (success) or see error message
     const currentUrl = page.url();
-    const hasError = await page.locator('text=błąd, text=error, text=nieprawidłowe, text=invalid').first().isVisible({timeout: 1000});
+    // Should either redirect to dashboard or show error - both are valid outcomes to test
+    const isRedirected = !currentUrl.includes('/logowanie');
+    const hasErrorMessage = await page.locator('[role="alert"], .error-message, text=błędne').first().isVisible({timeout: 2000});
     
-    if (!hasError && !currentUrl.includes('/login')) {
-      // Successful login - should be redirected
-      expect(currentUrl).not.toContain('/login');
-    }
-    // If there's an error or still on login page, that's also valid for this test
+    // At least one should be true (either success redirect or error shown)
+    expect(isRedirected || hasErrorMessage).toBe(true);
   });
 });
