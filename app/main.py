@@ -29,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.api.v1.endpoints import kancelarie, users, cases, auth, payments, operator, notifications
+from app.api.v1.endpoints import kancelarie, users, cases, auth, payments, operator, notifications, documents
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
 app.include_router(kancelarie.router, prefix="/api/v1/kancelarie", tags=["kancelarie"])
 app.include_router(kancelarie.router, prefix="/api/v1/law-firms", tags=["law-firms"])
@@ -38,6 +38,7 @@ app.include_router(cases.router, prefix="/api/v1/cases", tags=["cases"])
 app.include_router(payments.router, prefix="/api/v1/payments", tags=["payments"])
 app.include_router(operator.router, prefix="/api/v1/operator", tags=["operator"])
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
+app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 
 @app.get("/")
 async def root():
