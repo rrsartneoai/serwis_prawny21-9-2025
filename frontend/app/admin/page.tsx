@@ -84,19 +84,30 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      
+      // Use FastAPI backend endpoints with proper authorization
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
+      };
+      
       const [statsResponse, activityResponse] = await Promise.all([
-        fetch("/api/admin/dashboard/stats"),
-        fetch("/api/admin/dashboard/activity"),
+        fetch("/api/v1/admin/dashboard/stats", { headers: authHeaders }),
+        fetch("/api/v1/admin/dashboard/activity", { headers: authHeaders }),
       ]);
 
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         setStats(statsData);
+      } else {
+        console.error("Stats API error:", statsResponse.status, await statsResponse.text());
       }
 
       if (activityResponse.ok) {
         const activityData = await activityResponse.json();
         setRecentActivity(activityData.activities);
+      } else {
+        console.error("Activity API error:", activityResponse.status, await activityResponse.text());
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);

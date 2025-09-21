@@ -56,6 +56,43 @@ class NotificationService:
                 "sms": "Prawnik AI: Sprawa '{case_title}' zakończona. Dziękujemy za skorzystanie z usług!",
                 "email_subject": "Sprawa zakończona - AI Prawnik PL",
                 "email_body": "Sprawa '{case_title}' została zakończona. Wszystkie analizy i dokumenty pozostają dostępne w Twoim panelu klienta."
+            },
+            
+            # Additional SMS templates for better user engagement
+            "CASE_REMINDER": {
+                "sms": "Prawnik AI: Przypomnienie - sprawa '{case_title}' oczekuje na Twoją odpowiedź. Panel: {panel_url}",
+                "email_subject": "Przypomnienie o sprawie",
+                "email_body": "Sprawa '{case_title}' oczekuje na Twoją odpowiedź lub działanie. Zaloguj się do panelu klienta aby kontynuować."
+            },
+            
+            "CONSULTATION_SCHEDULED": {
+                "sms": "Prawnik AI: Konsultacja umówiona na {date} o {time}. Link do spotkania w panelu: {panel_url}",
+                "email_subject": "Konsultacja umówiona",
+                "email_body": "Konsultacja w sprawie '{case_title}' została umówiona na {date} o godzinie {time}. Szczegóły i link do spotkania znajdziesz w panelu klienta."
+            },
+            
+            "DOCUMENT_UPLOADED": {
+                "sms": "Prawnik AI: Nowy dokument został dodany do sprawy '{case_title}'. Sprawdź w panelu: {panel_url}",
+                "email_subject": "Nowy dokument w sprawie",
+                "email_body": "Do sprawy '{case_title}' został dodany nowy dokument. Zaloguj się do panelu aby go przejrzeć."
+            },
+            
+            "INVOICE_GENERATED": {
+                "sms": "Prawnik AI: Faktura nr {invoice_number} została wystawiona. Kwota: {amount}zł. Link: {payment_url}",
+                "email_subject": "Nowa faktura - AI Prawnik PL",
+                "email_body": "Została wystawiona faktura nr {invoice_number} na kwotę {amount} zł za usługi w sprawie '{case_title}'. Link do płatności: {payment_url}"
+            },
+            
+            "WELCOME_NEW_CLIENT": {
+                "sms": "Prawnik AI: Witamy! Twoje konto zostało aktywowane. Panel klienta: {panel_url}",
+                "email_subject": "Witamy w AI Prawnik PL!",
+                "email_body": "Dziękujemy za rejestrację w AI Prawnik PL! Twoje konto zostało aktywowane. Możesz już korzystać z naszych usług poprzez panel klienta."
+            },
+            
+            "URGENT_DEADLINE": {
+                "sms": "Prawnik AI: PILNE! Termin w sprawie '{case_title}' kończy się za {days_left} dni. Kontakt: {contact_phone}",
+                "email_subject": "PILNE: Zbliżający się termin",
+                "email_body": "W sprawie '{case_title}' zbliża się ważny termin prawny (za {days_left} dni). Skontaktuj się z nami jak najszybciej."
             }
         }
     
