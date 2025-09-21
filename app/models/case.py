@@ -76,7 +76,7 @@ class Document(Base):
     file_type = Column(String)  # pdf, image, doc
     file_size = Column(Integer)
     file_path = Column(String)  # Path where file is stored
-    document_type = Column(Enum(DocumentType), default=DocumentType.UPLOADED)
+    document_type = Column(Enum(DocumentType), default=DocumentType.PDF)
     is_processed = Column(Boolean, default=False)
     ocr_text = Column(Text, nullable=True)  # Extracted text from OCR
     uploaded_at = Column(DateTime, default=datetime.utcnow)
