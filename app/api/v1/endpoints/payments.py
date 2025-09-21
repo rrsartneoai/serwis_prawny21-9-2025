@@ -232,36 +232,11 @@ async def payu_webhook(
 
 
 async def send_payment_confirmation_notification(case: Case, payment: Payment, db: Session):
-    """Send payment confirmation notifications to client"""
-    from app.models.notification import Notification, NotificationType, NotificationTemplateType, NotificationStatus
+    """Send payment confirmation notifications to client using notification service"""
+    from app.services.notification_service import notification_service
     
-    # Create email notification
-    email_notification = Notification(
-        user_id=case.user_id,
-        case_id=case.id,
-        type=NotificationType.EMAIL,
-        template=NotificationTemplateType.PAYMENT_RECEIVED,
-        subject="Płatność potwierdzona - AI Prawnik PL",
-        content=f"Płatność za analizę w sprawie '{case.title}' została potwierdzona za kwotę {payment.amount} zł. Prawnik przystąpi do analizy dokumentów.",
-        recipient_email=case.user.email if case.user else None,
-        status=NotificationStatus.PENDING
-    )
-    db.add(email_notification)
-    
-    # Create SMS notification if user has phone
-    if case.user and case.user.phone:
-        sms_notification = Notification(
-            user_id=case.user_id,
-            case_id=case.id,
-            type=NotificationType.SMS,
-            template=NotificationTemplateType.PAYMENT_RECEIVED,
-            content=f"Prawnik AI: Płatność {payment.amount}zł potwierdzona. Analiza dokumentów w trakcie realizacji. Sprawdź panel: {get_client_panel_url()}",
-            recipient_phone=case.user.phone,
-            status=NotificationStatus.PENDING
-        )
-        db.add(sms_notification)
-    
-    db.commit()
+    # Send payment confirmation via notification service
+    notification_service.send_payment_confirmation(db, case, payment.amount)
 
 
 def verify_payu_signature(webhook_data: dict, signature: str, secret: str) -> bool:

@@ -238,6 +238,10 @@ async def create_analysis(
     db.commit()
     db.refresh(analysis)
     
+    # Send notification to client about analysis ready
+    from app.services.notification_service import notification_service
+    notification_service.send_analysis_ready(db, case)
+    
     return analysis
 
 @router.post("/cases/{case_id}/legal-documents", response_model=LegalDocumentResponse)
@@ -278,6 +282,10 @@ async def create_legal_document(
     
     db.commit()
     db.refresh(legal_doc)
+    
+    # Send notification to client about documents ready
+    from app.services.notification_service import notification_service
+    notification_service.send_documents_ready(db, case)
     
     return legal_doc
 
