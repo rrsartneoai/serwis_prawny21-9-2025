@@ -1,0 +1,93 @@
+# Docker Compose for Legal Services Platform
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: legal_services_db
+    environment:
+      POSTGRES_DB: legal_services
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - legal_services_network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: legal_services_backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/legal_services
+      - PYTHONPATH=/app
+    volumes:
+      - ./uploads:/app/uploads
+      - ./app:/app/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - legal_services_network
+    restart: unless-stopped
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+    container_name: legal_services_frontend
+    environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://backend:8000/api
+    ports:
+      - "5000:5000"
+    depends_on:
+      - backend
+    networks:
+      - legal_services_network
+    restart: unless-stopped
+
+  # Development Frontend (alternative)
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: legal_services_frontend_dev
+    environment:
+      - NODE_ENV=development
+      - BACKEND_URL=http://backend:8000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:5000"
+    depends_on:
+      - backend
+    networks:
+      - legal_services_network
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  legal_services_network:
+    driver: bridge

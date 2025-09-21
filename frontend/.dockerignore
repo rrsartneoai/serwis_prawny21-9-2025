@@ -1,0 +1,33 @@
+# Frontend Docker ignore file
+node_modules
+npm-debug.log*
+.npm
+.env*.local
+.next/
+out/
+.git
+.gitignore
+README.md
+Dockerfile*
+.dockerignore
+coverage
+.nyc_output
+*.md
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+**/*.test.*
+**/*.spec.*
+tests/
+test-results/
+playwright-report/
+
+# Build cache
+.next/cache
