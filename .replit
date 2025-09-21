@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "python-3.11"]
+modules = ["nodejs-20", "web", "python-3.11", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
@@ -34,6 +34,7 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+waitForPort = 8000
 
 [[workflows.workflow]]
 name = "Frontend"
