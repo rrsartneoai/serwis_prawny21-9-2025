@@ -33,9 +33,37 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Check if accessing operator routes
+  if (pathname.startsWith("/panel-operatora")) {
+    try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        return NextResponse.redirect(new URL("/logowanie", request.url));
+      }
+
+      // Check if user has operator or admin role
+      const { data: user } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      if (!user || (user.role !== "operator" && user.role !== "admin")) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
+    } catch (error) {
+      console.error("Middleware error:", error);
+      return NextResponse.redirect(new URL("/logowanie", request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/panel-operatora/:path*"],
 };

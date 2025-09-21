@@ -12,6 +12,7 @@ import { ArrowLeft, Mail, Eye, EyeOff, Phone, MessageSquare, Shield } from "luci
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
+import { getPanelUrlByRole } from "@/lib/utils";
 
 export default function LogowaniePage() {
   const [loginMethod, setLoginMethod] = useState<"email" | "phone" | "email-code">("email");
@@ -53,7 +54,8 @@ export default function LogowaniePage() {
           title: "Zalogowano pomyślnie!",
           description: `Witaj z powrotem, ${result.user.name}!`,
         });
-        router.push("/panel-klienta");
+        const panelUrl = getPanelUrlByRole(result.user.role);
+        router.push(panelUrl);
       }
     }
     setIsLoading(false);
@@ -124,7 +126,8 @@ export default function LogowaniePage() {
         title: "Logowanie pomyślne!",
         description: `Witaj ${result.user.name}!`,
       });
-      router.push("/panel-klienta");
+      const panelUrl = getPanelUrlByRole(result.user.role);
+      router.push(panelUrl);
     }
     setIsLoading(false);
   };
