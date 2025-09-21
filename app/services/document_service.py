@@ -1,6 +1,7 @@
 import os
 import shutil
 import uuid
+from datetime import datetime
 from typing import List, Tuple
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
@@ -103,7 +104,7 @@ class DocumentService:
         return document
     
     def upload_files(self, files: List[UploadFile], case_id: int) -> Tuple[List[DocumentResponse], List[str]]:
-        """Upload multiple files for a case"""
+        """Upload multiple files for a case with automatic text extraction"""
         
         documents = []
         errors = []
@@ -121,6 +122,28 @@ class DocumentService:
                 
                 # Create database record
                 document = self.create_document_record(file, case_id, file_path)
+                
+                # Schedule text extraction as background task (don't block upload)
+                try:
+                    # Mark as uploaded but not fully processed
+                    document.is_uploaded = True
+                    self.db.commit()
+                    
+                    # TODO: Schedule background OCR task here
+                    # For now, do immediate extraction but don't mark as fully processed
+                    from app.services.ai_document_analysis_service import AIDocumentAnalysisService
+                    ai_service = AIDocumentAnalysisService(self.db)
+                    extracted_text = ai_service.extract_text_from_document(document)
+                    
+                    if extracted_text:
+                        document.ocr_text = extracted_text
+                        document.ocr_extracted_at = datetime.utcnow()
+                        # Don't set is_processed=True until full analysis is complete
+                        self.db.commit()
+                        self.db.refresh(document)
+                except Exception as text_error:
+                    # Log error but don't fail the upload
+                    print(f"Błąd podczas ekstraktowania tekstu z {file.filename}: {text_error}")
                 
                 # Convert to response model
                 documents.append(DocumentResponse.model_validate(document, from_attributes=True))

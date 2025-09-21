@@ -42,14 +42,28 @@ export class AuthAPIClient {
   private token: string | null = null;
 
   constructor() {
-    // Use the correct backend URL for Replit environment
+    // Use environment-based backend URL configuration
     if (typeof window !== 'undefined') {
-      // Browser environment - use Replit domain for backend
-      const replitDomain = process.env.NEXT_PUBLIC_REPLIT_DOMAIN || 'localhost:8000';
-      this.baseUrl = replitDomain.startsWith('http') ? replitDomain : `https://${replitDomain}`;
+      // Browser environment - use environment variable or fallback
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      if (backendUrl) {
+        this.baseUrl = backendUrl;
+      } else {
+        // Use relative URLs that will be handled by Next.js rewrites
+        this.baseUrl = '';
+      }
+      
+      // Load existing token from localStorage
+      this.loadTokenFromStorage();
     } else {
       // Server-side rendering - use localhost
       this.baseUrl = 'http://localhost:8000';
+    }
+  }
+  
+  loadTokenFromStorage() {
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('auth-token');
     }
   }
 

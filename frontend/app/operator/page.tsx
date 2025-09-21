@@ -120,7 +120,17 @@ export default function OperatorStatsPage() {
     try {
       setLoading(true);
       
-      // Mock data since backend not yet implemented
+      // Use unified API client for consistent backend communication
+      try {
+        const { authAPI } = await import("@/lib/api/auth");
+        const realStats = await authAPI.makeRequest('GET', '/operator/stats', undefined, true);
+        setStats(realStats);
+        return;
+      } catch (error) {
+        console.error("Backend API not available, using mock data:", error);
+      }
+      
+      // Fallback to mock data if backend not available
       const mockStats: OperatorStats = {
         overview: {
           active_clients: 47,

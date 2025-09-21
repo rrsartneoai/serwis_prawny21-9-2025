@@ -85,29 +85,24 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       
-      // Use FastAPI backend endpoints with proper authorization
-      const authHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
-      };
+      // Use unified API client for consistent backend communication
+      const { authAPI } = await import("@/lib/api/auth");
       
-      const [statsResponse, activityResponse] = await Promise.all([
-        fetch("/api/v1/admin/dashboard/stats", { headers: authHeaders }),
-        fetch("/api/v1/admin/dashboard/activity", { headers: authHeaders }),
-      ]);
-
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStats(statsData);
-      } else {
-        console.error("Stats API error:", statsResponse.status, await statsResponse.text());
-      }
-
-      if (activityResponse.ok) {
-        const activityData = await activityResponse.json();
-        setRecentActivity(activityData.activities);
-      } else {
-        console.error("Activity API error:", activityResponse.status, await activityResponse.text());
+      try {
+        const [statsResponse, activityResponse] = await Promise.all([
+          authAPI.makeRequest('GET', '/admin/dashboard/stats', undefined, true),
+          authAPI.makeRequest('GET', '/admin/dashboard/activity', undefined, true),
+        ]);
+        
+        if (statsResponse) {
+          setStats(statsResponse);
+        }
+        
+        if (activityResponse && activityResponse.activities) {
+          setRecentActivity(activityResponse.activities);
+        }
+      } catch (error) {
+        console.error("Error fetching admin dashboard data:", error);
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
