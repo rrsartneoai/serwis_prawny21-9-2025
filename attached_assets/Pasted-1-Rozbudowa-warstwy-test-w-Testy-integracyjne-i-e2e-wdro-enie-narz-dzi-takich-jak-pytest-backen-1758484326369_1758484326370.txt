@@ -1,0 +1,33 @@
+1. Rozbudowa warstwy testów
+Testy integracyjne i e2e – wdrożenie narzędzi takich jak pytest (backend) i Playwright/Cypress (frontend) dla scenariuszy użytkownika, autoryzacji, komunikacji, płatności.
+Testy pokrycia – automatyczne raporty pokrycia kodu (np. Coverage.py, Istanbul).
+2. Wdrożenie CI/CD
+GitHub Actions – automatyczne budowanie, testowanie i wdrażanie na serwerach staging/production.
+Linting & formatowanie – automatyczne sprawdzanie stylu kodu (Black, Flake8 dla Pythona, ESLint/Prettier dla TS).
+3. Zaawansowana walidacja i obsługa błędów
+Globalne obsługiwanie wyjątków w FastAPI – spójne komunikaty błędów, logowanie, metryki.
+Frontend – obsługa błędów sieciowych, UI fallback dla błędów API.
+4. Bezpieczeństwo
+Rate limiting i ochrona przed brute-force (np. za pomocą slowapi lub django-ratelimit).
+Monitoring bezpieczeństwa – audyt logowań, alerty na podejrzane logowania, integracja z zewnętrznym SIEM.
+5. Wydajność i skalowalność
+Cache’owanie – Redis jako cache dla najczęściej pobieranych danych (np. dokumenty, status spraw).
+Asynchroniczne zadania – Celery/Arq dla obsługi generowania dokumentów, powiadomień czy integracji AI.
+6. Moduł płatności
+Rozszerzenie Stripe/BLIK – dodanie obsługi subskrypcji, automatycznego generowania faktur, webhooków do rozliczeń.
+Panel billingowy – wgląd w historię płatności, status faktur, opcje zwrotów.
+7. UX/UI i dostępność
+Responsywność – optymalizacja pod urządzenia mobilne, testy Lighthouse.
+Dostępność (WCAG) – kolory, kontrasty, opisy alternatywne, nawigacja klawiaturą.
+8. Rozwój API i SDK
+Automatyczna dokumentacja API (Swagger/OpenAPI + Redoc).
+SDK klienckie – publikacja na PyPI/NPM, przykłady użycia, CI dla SDK.
+9. Integracje AI
+Automatyczna klasyfikacja dokumentów – wykorzystanie LLM/transformerów do rozpoznawania typów dokumentów, streszczeń.
+System rekomendacji – podpowiedzi AI dla użytkowników, np. jakie kolejne kroki można podjąć w sprawie.
+10. DevOps oraz monitoring
+Monitoring aplikacji (Prometheus, Grafana, Sentry).
+Logowanie audytowe – rejestrowanie najważniejszych działań użytkownika (np. dostęp do dokumentów, zmiany statusu sprawy).
+11. Onboarding i wsparcie
+Interaktywne tutoriale w aplikacji (np. przez Guide.js).
+Chatbot AI – wsparcie dla klientów, szybkie odpowiedzi na najczęstsze pytania.

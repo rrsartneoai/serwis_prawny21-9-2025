@@ -31,6 +31,13 @@ This is a full-stack legal services platform built with Next.js frontend and Fas
 - ✅ **Project is fully operational in Replit environment**
 - ✅ **GitHub import setup completed - ready for development**
 
+### Admin/Operator Authentication Fix (September 21, 2025)
+- ✅ **Authentication issue resolved**: Fixed 401 errors for admin and operator login endpoints
+- ✅ **Dependency updates**: Changed from `get_verified_user` to `get_current_user` for admin/operator access
+- ✅ **Test accounts created**: Admin (admin@test.com) and Operator (operator@test.com) accounts with proper roles
+- ✅ **JWT authentication**: Successfully tested token generation and endpoint access
+- ✅ **Role-based access**: Admin and operator panels now accessible with proper authorization
+
 ### Payment System Implementation (September 21, 2025)
 - ✅ **Security fixes**: Removed user-controlled payment status updates to prevent fraud
 - ✅ **Database stability**: Fixed enum compatibility issues between string and PackageType enum values
