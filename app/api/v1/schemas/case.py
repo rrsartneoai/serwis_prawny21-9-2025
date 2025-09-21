@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 
 class DocumentBase(BaseModel):
@@ -25,16 +25,24 @@ class CaseBase(BaseModel):
     client_notes: Optional[str] = None
 
 class CaseCreate(CaseBase):
-    package_type: Optional[str] = None
+    package_type: Optional[Literal["basic", "standard", "premium", "express"]] = None
     package_price: Optional[float] = None
 
-class CaseUpdate(BaseModel):
-    title: Optional[str] = None
+# Client can only update basic case info
+class CaseClientUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     client_notes: Optional[str] = None
-    status: Optional[str] = None
-    package_type: Optional[str] = None
+
+# Operator/Admin can update status and package
+class CaseOperatorUpdate(CaseClientUpdate):
+    status: Optional[Literal["new", "awaiting_payment", "paid", "processing", "analysis_ready", "documents_ready", "completed", "cancelled"]] = None
+    package_type: Optional[Literal["basic", "standard", "premium", "express"]] = None
     package_price: Optional[float] = None
+
+# Legacy update schema for backward compatibility
+class CaseUpdate(CaseClientUpdate):
+    pass
 
 class CaseInDB(CaseBase):
     id: int

@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.user import User
 from app.models.case import Case, Document
-from app.api.v1.schemas.case import CaseCreate, CaseInDB, CaseUpdate, DocumentInDB
-from app.core.auth import get_current_active_user
+from app.api.v1.schemas.case import CaseCreate, CaseInDB, CaseUpdate, CaseClientUpdate, DocumentInDB
+from app.api.v1.endpoints.auth import get_verified_user
 
 router = APIRouter()
 
@@ -26,7 +26,7 @@ async def create_case(
     package_type: str = Form(None),
     package_price: float = Form(None),
     files: List[UploadFile] = File([]),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Create a new case with optional file uploads"""
@@ -139,7 +139,7 @@ async def create_case(
 
 @router.get("", response_model=List[CaseInDB])
 def get_user_cases(
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Get all cases for the current user"""
@@ -149,7 +149,7 @@ def get_user_cases(
 @router.get("/{case_id}", response_model=CaseInDB)
 def get_case(
     case_id: int,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Get a specific case"""
@@ -170,7 +170,7 @@ def get_case(
 def update_case(
     case_id: int,
     case_update: CaseUpdate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Update a case"""
@@ -198,7 +198,7 @@ def update_case(
 @router.delete("/{case_id}")
 def delete_case(
     case_id: int,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Delete a case and its documents"""
@@ -227,7 +227,7 @@ def delete_case(
 def download_document(
     case_id: int,
     document_id: int,
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ):
     """Download a document file"""
