@@ -7,7 +7,7 @@ from datetime import datetime
 from app.db.database import get_db
 from app.models.case import Case, Analysis, LegalDocument, CaseStatus
 from app.models.user import User, UserRole
-from app.api.v1.endpoints.auth import get_verified_user
+from app.api.v1.endpoints.auth import get_current_user, get_verified_user
 from app.services.ai_document_analysis_service import create_ai_document_service
 
 router = APIRouter()
@@ -93,12 +93,17 @@ class OperatorCaseResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# Check if user is operator
-async def require_operator(current_user: User = Depends(get_verified_user)):
+# Check if user is operator - doesn't require email verification
+async def require_operator(current_user: User = Depends(get_current_user)):
     if current_user.role != UserRole.OPERATOR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Operator access required"
+        )
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account is deactivated"
         )
     return current_user
 

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from app.db.database import get_db
 from app.models.notification import Notification, NotificationStatus, NotificationType, NotificationTemplateType
 from app.models.user import User, UserRole
-from app.api.v1.endpoints.auth import get_verified_user
+from app.api.v1.endpoints.auth import get_current_user, get_verified_user
 from app.services.notification_service import notification_service
 
 router = APIRouter()
@@ -79,12 +79,17 @@ async def get_unread_count(
     
     return {"unread_count": count}
 
-# Operator endpoints
-async def require_operator(current_user: User = Depends(get_verified_user)):
+# Operator endpoints - doesn't require email verification
+async def require_operator(current_user: User = Depends(get_current_user)):
     if current_user.role != UserRole.OPERATOR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Operator access required"
+        )
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account is deactivated"
         )
     return current_user
 

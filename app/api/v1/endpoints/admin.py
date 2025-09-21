@@ -10,17 +10,22 @@ from app.models.case import Case
 from app.models.payment import Payment
 from app.models.notification import Notification
 from app.models.kancelaria import Kancelaria
-from app.api.v1.endpoints.auth import get_verified_user
+from app.api.v1.endpoints.auth import get_current_user, get_verified_user
 from pydantic import BaseModel
 
 router = APIRouter()
 
-# Admin permission check
-async def require_admin(current_user: User = Depends(get_verified_user)):
+# Admin permission check - doesn't require email verification
+async def require_admin(current_user: User = Depends(get_current_user)):
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
+        )
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account is deactivated"
         )
     return current_user
 
