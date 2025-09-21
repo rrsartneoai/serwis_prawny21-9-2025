@@ -121,6 +121,8 @@ async def get_operator_cases(
     # Show cases that need operator attention
     cases = query.filter(
         Case.status.in_([
+            CaseStatus.NEW,
+            CaseStatus.AWAITING_PAYMENT,
             CaseStatus.PAID, 
             CaseStatus.PROCESSING, 
             CaseStatus.ANALYSIS_READY,
