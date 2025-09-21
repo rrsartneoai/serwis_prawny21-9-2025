@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 
 from app.db.database import Base, engine, get_db
-from app.models import kancelaria, user, case # Import models to ensure they are registered with SQLAlchemy
+from app.models import kancelaria, user, case, payment, notification # Import models to ensure they are registered with SQLAlchemy
 
 Base.metadata.create_all(bind=engine) # Create database tables
 
