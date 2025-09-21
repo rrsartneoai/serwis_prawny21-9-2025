@@ -25,3 +25,11 @@ python-dotenv==1.0.1
 python-jose[cryptography]==3.3.0
 SQLAlchemy==2.0.30
 uvicorn==0.29.0
+fastapi
+passlib[bcrypt]
+pydantic
+pytest
+python-dotenv
+python-jose[cryptography]
+sqlalchemy
+uvicorn
