@@ -34,7 +34,6 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m uvicorn app.main:app --host localhost --port 8000 --reload"
-waitForPort = 8000
 
 [[workflows.workflow]]
 name = "Frontend"
@@ -51,6 +50,10 @@ waitForPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 44101
+externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
