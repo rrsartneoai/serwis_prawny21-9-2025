@@ -9,8 +9,9 @@ This is a full-stack legal services platform built with Next.js frontend and Fas
 - **Database**: SQLite database with SQLAlchemy ORM models
 
 ## Current Configuration
-- **Frontend**: Running on port 5000 with proper Replit configuration
-- **Backend**: FastAPI with CORS configured for all origins (Replit environment)
+- **Frontend**: Running on port 5000 with proper Replit configuration and external domain connectivity
+- **Backend**: FastAPI running on port 8000 with 0.0.0.0 binding for external access and CORS configured
+- **Authentication**: Full working registration and login system with email verification
 - **Deployment**: Configured for autoscale deployment targeting the frontend
 
 ## Recent Changes (September 21, 2025)
