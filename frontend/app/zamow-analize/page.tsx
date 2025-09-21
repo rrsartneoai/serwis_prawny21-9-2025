@@ -327,7 +327,7 @@ export default function ZamowAnalizePage() {
                   <CardTitle>Wybierz pakiet analizy</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     {packages.map((pkg) => (
                       <Card
                         key={pkg.id}
@@ -429,45 +429,45 @@ export default function ZamowAnalizePage() {
                   <div className="space-y-4">
                     <h4 className="font-medium">Wybierz metodę płatności:</h4>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                       <Card className="cursor-pointer hover:shadow-md border-2 border-red-500">
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-medium mb-2">
+                        <CardContent className="p-3 md:p-4 text-center">
+                          <div className="text-base md:text-lg font-medium mb-1 md:mb-2">
                             Karta płatnicza
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-xs md:text-sm text-gray-500">
                             Visa, Mastercard
                           </div>
-                          <Badge className="mt-2 bg-yellow-100 text-yellow-800">
+                          <Badge className="mt-1 md:mt-2 bg-yellow-100 text-yellow-800 text-xs">
                             SZYBKO I BEZPIECZNIE
                           </Badge>
                         </CardContent>
                       </Card>
 
                       <Card className="cursor-pointer hover:shadow-md">
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-medium mb-2">BLIK</div>
-                          <div className="text-sm text-gray-500">
+                        <CardContent className="p-3 md:p-4 text-center">
+                          <div className="text-base md:text-lg font-medium mb-1 md:mb-2">BLIK</div>
+                          <div className="text-xs md:text-sm text-gray-500">
                             Kod z aplikacji bankowej
                           </div>
                         </CardContent>
                       </Card>
 
                       <Card className="cursor-pointer hover:shadow-md">
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-medium mb-2">
+                        <CardContent className="p-3 md:p-4 text-center">
+                          <div className="text-base md:text-lg font-medium mb-1 md:mb-2">
                             Przelew internetowy
                           </div>
-                          <div className="text-sm text-gray-500">23 banki</div>
+                          <div className="text-xs md:text-sm text-gray-500">23 banki</div>
                         </CardContent>
                       </Card>
 
                       <Card className="cursor-pointer hover:shadow-md">
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-medium mb-2">
+                        <CardContent className="p-3 md:p-4 text-center">
+                          <div className="text-base md:text-lg font-medium mb-1 md:mb-2">
                             Google Pay
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-xs md:text-sm text-gray-500">
                             Płatność mobilna
                           </div>
                         </CardContent>
@@ -475,14 +475,14 @@ export default function ZamowAnalizePage() {
 
                       {/* Dodany kafelek PayU */}
                       <Card className="cursor-pointer hover:shadow-md">
-                        <CardContent className="p-4 text-center">
-                          <div className="text-lg font-medium mb-2">
+                        <CardContent className="p-3 md:p-4 text-center">
+                          <div className="text-base md:text-lg font-medium mb-1 md:mb-2">
                             PayU
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-xs md:text-sm text-gray-500">
                             Szybkie płatności online
                           </div>
-                          <Badge className="mt-2 bg-green-100 text-green-800">
+                          <Badge className="mt-1 md:mt-2 bg-green-100 text-green-800 text-xs">
                             Popularne w Polsce
                           </Badge>
                         </CardContent>

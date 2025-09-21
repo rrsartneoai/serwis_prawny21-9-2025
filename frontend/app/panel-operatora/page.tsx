@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAuth, mockLogin } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
+import { operatorAPI, OperatorCase } from "@/lib/api/operator";
+import { toast } from "@/components/ui/use-toast";
 import {
   FileText,
   Filter,
@@ -17,18 +20,20 @@ import {
   Clock4,
   AlertCircle,
 } from "lucide-react";
+import Link from "next/link";
 
 interface Task {
   id: string;
   caseId: string;
-  clientName: string;
+  client: string; // Changed from clientName for consistency
   type: string;
   title: string;
   priority: "high" | "medium" | "low";
   deadline: Date;
   status: "pending" | "in_progress" | "completed";
-  documents: string[];
-  clientNotes: string;
+  documents: number; // Changed from string[] to number (count)
+  package: string;
+  description: string;
 }
 
 export default function PanelOperatoraPage() {
@@ -36,59 +41,79 @@ export default function PanelOperatoraPage() {
   /*                              AUTH MOCKING                              */
   /* ---------------------------------------------------------------------- */
   const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     "zadania" | "statystyki" | "klienci" | "szablony" | "ustawienia"
   >("zadania");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [cases, setCases] = useState<OperatorCase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState("all");
 
-  // quick-and-dirty mock login so the preview works
+  // Redirect if not authenticated or not operator
   useEffect(() => {
     if (!isAuthenticated) {
-      mockLogin("operator@example.com", "operator");
+      router.push('/logowanie');
+    } else if (user?.role !== 'operator') {
+      router.push('/'); // Redirect non-operators
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user, router]);
 
-  /* ---------------------------------------------------------------------- */
-  /*                               MOCK DATA                                */
-  /* ---------------------------------------------------------------------- */
-  const mockTasks: Task[] = [
-    {
-      id: "1",
-      caseId: "1",
-      clientName: "Jan Kowalski",
-      type: "analysis",
-      title: "Analiza nakazu zapłaty",
-      priority: "high",
-      deadline: new Date("2025-07-20"),
-      status: "pending",
-      documents: ["nakaz_zaplaty.pdf"],
-      clientNotes: "Nie zgadzam się z nakazem, uważam że jest bezpodstawny.",
-    },
-    {
-      id: "2",
-      caseId: "2",
-      clientName: "Anna Nowak",
-      type: "document",
-      title: "Sprzeciw od nakazu zapłaty",
-      priority: "medium",
-      deadline: new Date("2025-07-22"),
-      status: "in_progress",
-      documents: ["analiza_completed.pdf"],
-      clientNotes: "Proszę o szybkie przygotowanie sprzeciwu.",
-    },
-    {
-      id: "3",
-      caseId: "3",
-      clientName: "Piotr Wiśniewski",
-      type: "analysis",
-      title: "Analiza wezwania komornika",
-      priority: "low",
-      deadline: new Date("2025-07-25"),
-      status: "completed",
-      documents: ["wezwanie_komornik.jpg"],
-      clientNotes: "",
-    },
-  ];
+  // Load real cases from API
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'operator') {
+      loadCases();
+    }
+  }, [isAuthenticated, user]);
+
+  const loadCases = async () => {
+    setLoading(true);
+    const { cases: operatorCases, error } = await operatorAPI.getCases();
+    
+    if (error) {
+      toast({
+        title: "Błąd",
+        description: error,
+        variant: "destructive",
+      });
+    } else if (operatorCases) {
+      setCases(operatorCases);
+    }
+    setLoading(false);
+  };
+
+  const transformCaseToTask = (operatorCase: OperatorCase): Task => {
+    const statusMap: Record<string, Task['status']> = {
+      'paid': 'pending',
+      'processing': 'in_progress',
+      'analysis_ready': 'completed',
+      'documents_ready': 'completed',
+      'completed': 'completed'
+    };
+    
+    const priorityMap: Record<string, Task['priority']> = {
+      'basic': 'low',
+      'standard': 'medium',
+      'premium': 'high'
+    };
+
+    return {
+      id: operatorCase.id.toString(),
+      caseId: operatorCase.id.toString(),
+      title: operatorCase.title,
+      client: operatorCase.client_name || operatorCase.client_email || 'Nieznany klient',
+      status: statusMap[operatorCase.status] || 'pending',
+      priority: priorityMap[operatorCase.package_type || 'standard'] || 'medium',
+      deadline: operatorCase.deadline ? new Date(operatorCase.deadline) : new Date(Date.now() + 24 * 60 * 60 * 1000),
+      documents: operatorCase.documents.length,
+      package: operatorCase.package_type || 'standard',
+      type: 'analysis',
+      description: operatorCase.description || operatorCase.client_notes || ''
+    };
+  };
+
+  // Transform real cases to tasks for UI compatibility
+  const currentTasks = cases.map(transformCaseToTask);
 
   const sidebarItems = [
     { id: "zadania", label: "Zadania do wykonania", icon: FileText },
@@ -183,88 +208,133 @@ export default function PanelOperatoraPage() {
           {activeTab === "zadania" && (
             <>
               {/* header row */}
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h1 className="text-2xl font-bold text-gray-900">
                   Zadania do wykonania
                 </h1>
-                <Button variant="outline" size="sm">
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtruj
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Filtruj
+                  </Button>
+                  <Button size="sm" onClick={loadCases} disabled={loading}>
+                    {loading ? "Ładowanie..." : "Odśwież"}
+                  </Button>
+                </div>
               </div>
 
               {/* simple stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <StatCard
                   title="Oczekujące"
-                  value={mockTasks.filter((t) => t.status === "pending").length}
+                  value={currentTasks.filter((t) => t.status === "pending").length}
                   color="bg-blue-100 text-blue-800"
                 />
                 <StatCard
                   title="W trakcie"
                   value={
-                    mockTasks.filter((t) => t.status === "in_progress").length
+                    currentTasks.filter((t) => t.status === "in_progress").length
                   }
                   color="bg-yellow-100 text-yellow-800"
                 />
                 <StatCard
                   title="Zakończone"
                   value={
-                    mockTasks.filter((t) => t.status === "completed").length
+                    currentTasks.filter((t) => t.status === "completed").length
                   }
                   color="bg-green-100 text-green-800"
                 />
               </div>
 
               {/* task list */}
-              <div className="overflow-x-auto rounded-lg bg-white shadow">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-100 text-left">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Tytuł</th>
-                      <th className="px-4 py-3">Klient</th>
-                      <th className="px-4 py-3">Priorytet</th>
-                      <th className="px-4 py-3">Termin</th>
-                      <th className="px-4 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockTasks.map((task) => {
-                      const priorityClass = getPriorityBadge(task.priority);
-                      const statusMeta = getStatusBadge(task.status);
-                      return (
-                        <tr key={task.id} className="border-t">
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            {task.title}
-                          </td>
-                          <td className="px-4 py-3">{task.clientName}</td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${priorityClass}`}
-                            >
-                              {task.priority === "high"
-                                ? "Wysoki"
-                                : task.priority === "medium"
-                                  ? "Średni"
-                                  : "Niski"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {task.deadline.toLocaleDateString("pl-PL")}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${statusMeta.color}`}
-                            >
-                              <statusMeta.icon className="h-3 w-3" />
-                              {statusMeta.label}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="space-y-4">
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-2 text-gray-600">Ładowanie spraw...</p>
+                  </div>
+                ) : currentTasks.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600">Brak spraw do przetworzenia</p>
+                  </div>
+                ) : currentTasks.map((task) => {
+                  const priorityClass = getPriorityBadge(task.priority);
+                  const statusMeta = getStatusBadge(task.status);
+                  return (
+                    <Card key={task.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {task.title}
+                              </h3>
+                              <div className="flex gap-2 mt-2 sm:mt-0">
+                                <span
+                                  className={`inline-block px-2 py-1 rounded text-xs font-medium ${priorityClass}`}
+                                >
+                                  {task.priority === "high"
+                                    ? "Wysoki"
+                                    : task.priority === "medium"
+                                      ? "Średni"
+                                      : "Niski"}
+                                </span>
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${statusMeta.color}`}
+                                >
+                                  <statusMeta.icon className="h-3 w-3" />
+                                  {statusMeta.label}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                              <div>
+                                <p className="text-sm font-medium text-gray-500">Klient</p>
+                                <p className="text-gray-900">{task.client}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-500">Termin</p>
+                                <p className="text-gray-900">{task.deadline.toLocaleDateString("pl-PL")}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-500">Dokumenty</p>
+                                <p className="text-gray-900">{task.documents} plików</p>
+                              </div>
+                            </div>
+                            {task.description && (
+                              <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                                <p className="text-sm font-medium text-blue-800 mb-1">Uwagi klienta:</p>
+                                <p className="text-blue-700 text-sm">{task.description}</p>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2 lg:ml-4">
+                            <Button size="sm" className="w-full lg:w-auto" asChild>
+                              <Link href={`/panel-operatora/sprawa/${task.caseId}`}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Otwórz sprawę
+                              </Link>
+                            </Button>
+                            {task.status === "pending" && (
+                              <Button size="sm" variant="outline" className="w-full lg:w-auto">
+                                Rozpocznij pracę
+                              </Button>
+                            )}
+                            {task.status === "in_progress" && (
+                              <Button size="sm" variant="outline" className="w-full lg:w-auto">
+                                Zakończ
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost" className="w-full lg:w-auto">
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Kontakt
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </>
           )}

@@ -231,16 +231,22 @@ def download_document(
     db: Session = Depends(get_db)
 ):
     """Download a document file"""
-    # Verify case ownership
-    case = db.query(Case).filter(
-        Case.id == case_id,
-        Case.user_id == current_user.id
-    ).first()
+    from app.models.user import UserRole
+    
+    # Check if user owns the case OR is an operator
+    case = db.query(Case).filter(Case.id == case_id).first()
     
     if not case:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Case not found"
+        )
+    
+    # Allow access for case owner or operator
+    if case.user_id != current_user.id and current_user.role != UserRole.OPERATOR:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
         )
     
     # Get document

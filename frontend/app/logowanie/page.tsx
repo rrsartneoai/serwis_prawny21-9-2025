@@ -228,30 +228,32 @@ export default function LogowaniePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <Button
                     variant={loginMethod === "email" ? "default" : "outline"}
-                    className="flex-1"
+                    className="w-full justify-center"
                     onClick={() => setLoginMethod("email")}
                     disabled={isLoading}
                   >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Email + Hasło
+                    <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Email + Hasło</span>
+                    <span className="sm:hidden">Email</span>
                   </Button>
                   <Button
                     variant={loginMethod === "phone" ? "default" : "outline"}
-                    className="flex-1"
+                    className="w-full justify-center"
                     onClick={() => setLoginMethod("phone")}
                     disabled={isLoading}
                   >
-                    <Phone className="mr-2 h-4 w-4" />
-                    SMS
+                    <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>SMS</span>
                   </Button>
                   <Button
                     variant={loginMethod === "email-code" ? "default" : "outline"}
-                    className="flex-1"
+                    className="w-full justify-center"
                     onClick={() => setLoginMethod("email-code")}
                     disabled={isLoading}
                   >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Kod Email
+                    <MessageSquare className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Kod Email</span>
+                    <span className="sm:hidden">Kod</span>
                   </Button>
                 </div>
               )}

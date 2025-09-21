@@ -121,7 +121,25 @@ export function Header() {
           </Link>
         </div>
         {/* Desktop Navigation */}
-        {/* USUWAM <nav className="hidden lg:flex items-center gap-6"> ... </nav> (całe menu desktopowe) */}
+        <nav className="hidden lg:flex items-center gap-6">
+          <Link href="/" className="text-gray-700 hover:text-blue-600 transition-colors">
+            Strona główna
+          </Link>
+          <Link href="/analiza-dokumentow" className="text-gray-700 hover:text-blue-600 transition-colors">
+            Analiza dokumentów
+          </Link>
+          <Link href="/cennik" className="text-gray-700 hover:text-blue-600 transition-colors">
+            Cennik
+          </Link>
+          <Link href="/kontakt" className="text-gray-700 hover:text-blue-600 transition-colors">
+            Kontakt
+          </Link>
+          {isAuthenticated && panelLink && (
+            <Link href={panelLink} className="text-blue-600 hover:text-blue-800 font-medium transition-colors">
+              Mój Panel
+            </Link>
+          )}
+        </nav>
         {/* Auth/User Actions */}
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
@@ -172,12 +190,16 @@ export function Header() {
               </Button>
             </div>
           )}
-          {/* Napis Menu widoczny wszędzie */}
-          {/* <span className="inline text-gray-500 font-medium text-base select-none ml-2">Menu</span> */}
-          {/* Hamburger - mobile only */}
-          {/* <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
+          {/* Mobile Menu Button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="lg:hidden" 
+            onClick={() => setMobileMenuOpen(true)}
+          >
             <Menu className="h-6 w-6" />
-          </Button> */}
+            <span className="sr-only">Open menu</span>
+          </Button>
         </div>
       </div>
       {/* Mobile Menu (Sheet) */}
