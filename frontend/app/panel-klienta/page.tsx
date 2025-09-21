@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useAuth, mockLogin } from "@/lib/auth";
-import type { Case } from "@/lib/types";
+import { useAuth } from "@/lib/auth";
+import { casesApi, type Case } from "@/lib/api/cases";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   Eye,
@@ -32,104 +33,52 @@ export default function PanelKlientaPage() {
   const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("sprawy");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [cases, setCases] = useState<Case[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  // Mock login if not authenticated
+  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      mockLogin("klient@example.com", "client");
+      router.push("/logowanie");
+      return;
     }
+  }, [isAuthenticated, router]);
+
+  // Load cases from API
+  useEffect(() => {
+    const loadCases = async () => {
+      if (!isAuthenticated) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      const response = await casesApi.getCases();
+      
+      if (response.error) {
+        setError(response.error);
+      } else if (response.cases) {
+        setCases(response.cases);
+      }
+      
+      setLoading(false);
+    };
+
+    loadCases();
   }, [isAuthenticated]);
 
-  const mockCases: Case[] = [
-    {
-      id: "1",
-      name: "Nakaz zapłaty - Sprawa nr 1",
-      clientId: user?.id || "",
-      status: "analysis_ready",
-      documents: [
-        {
-          id: "1",
-          name: "nakaz_zaplaty.pdf",
-          type: "pdf",
-          url: "/documents/nakaz.pdf",
-          uploadedAt: new Date("2024-01-15"),
-          size: 1024000,
-        },
-      ],
-      analysis: {
-        id: "1",
-        caseId: "1",
-        content:
-          "Otrzymany nakaz zapłaty jest prawidłowy pod względem formalnym. Został wydany przez właściwy sąd i zawiera wszystkie wymagane elementy. Jednakże istnieją podstawy do złożenia sprzeciwu, szczególnie w zakresie wysokości dochodzonej kwoty oraz odsetek. Analiza dokumentów wskazuje na możliwość zakwestionowania części roszczeń...",
-        summary:
-          "Nakaz zapłaty formalnie prawidłowy, ale istnieją podstawy do sprzeciwu",
-        recommendations: [
-          "Złożenie sprzeciwu w terminie 14 dni od doręczenia",
-          "Przygotowanie dowodów na poparcie stanowiska",
-          "Rozważenie ugody pozasądowej",
-          "Analiza wysokości odsetek i kosztów",
-        ],
-        possibleDocuments: [
-          {
-            id: "1",
-            name: "Sprzeciw od nakazu zapłaty",
-            description:
-              "Profesjonalnie przygotowany sprzeciw z uzasadnieniem prawnym",
-            price: 89,
-            estimatedTime: "24h",
-            category: "Pisma procesowe",
-          },
-          {
-            id: "2",
-            name: "Wniosek o rozłożenie na raty",
-            description: "Wniosek o rozłożenie należności na raty płatne",
-            price: 59,
-            estimatedTime: "12h",
-            category: "Wnioski",
-          },
-          {
-            id: "3",
-            name: "Propozycja ugody",
-            description: "Projekt ugody pozasądowej z wierzycielem",
-            price: 79,
-            estimatedTime: "18h",
-            category: "Ugody",
-          },
-        ],
-        price: 59,
-        status: "completed",
-        previewContent:
-          "Otrzymany nakaz zapłaty jest prawidłowy pod względem formalnym. Został wydany przez właściwy sąd i zawiera wszystkie wymagane elementy...",
-        createdAt: new Date("2024-01-16"),
-      },
-      generatedDocuments: [],
-      clientNotes:
-        "Nie zgadzam się z wysokością odsetek. Mam dokumenty potwierdzające częściowe spłaty.",
-      createdAt: new Date("2024-01-15"),
-      updatedAt: new Date("2024-01-16"),
-    },
-    {
-      id: "2",
-      name: "Wezwanie komornika - Sprawa nr 2",
-      clientId: user?.id || "",
-      status: "analyzing",
-      documents: [
-        {
-          id: "2",
-          name: "wezwanie_komornik.jpg",
-          type: "image",
-          url: "/documents/wezwanie.jpg",
-          uploadedAt: new Date("2024-01-18"),
-          size: 2048000,
-        },
-      ],
-      generatedDocuments: [],
-      clientNotes:
-        "Otrzymałem wezwanie do zapłaty od komornika. Czy mogę się odwołać?",
-      createdAt: new Date("2024-01-18"),
-      updatedAt: new Date("2024-01-18"),
-    },
-  ];
+  // Add refresh function for after creating new cases
+  const refreshCases = async () => {
+    setLoading(true);
+    const response = await casesApi.getCases();
+    if (response.error) {
+      setError(response.error);
+    } else if (response.cases) {
+      setCases(response.cases);
+    }
+    setLoading(false);
+  };
 
   const sidebarItems = [
     { id: "sprawy", label: "Moje sprawy", icon: FileText },
@@ -142,7 +91,9 @@ export default function PanelKlientaPage() {
 
   const getStatusBadge = (status: Case["status"]) => {
     const statusConfig = {
+      draft: { label: "Szkic", color: "bg-gray-100 text-gray-800" },
       new: { label: "Nowa", color: "bg-blue-100 text-blue-800" },
+      submitted: { label: "Przesłana", color: "bg-blue-100 text-blue-800" },
       analyzing: {
         label: "Analizujemy",
         color: "bg-yellow-100 text-yellow-800",
@@ -156,6 +107,8 @@ export default function PanelKlientaPage() {
         color: "bg-purple-100 text-purple-800",
       },
       completed: { label: "Zakończona", color: "bg-gray-100 text-gray-800" },
+      cancelled: { label: "Anulowana", color: "bg-red-100 text-red-800" },
+      rejected: { label: "Odrzucona", color: "bg-red-100 text-red-800" },
     };
 
     return statusConfig[status] || statusConfig.new;
@@ -238,7 +191,32 @@ export default function PanelKlientaPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-6">
-                {mockCases.map((case_) => (
+                {loading ? (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Ładowanie spraw...</p>
+                    </CardContent>
+                  </Card>
+                ) : error ? (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <p className="text-red-600 mb-4">{error}</p>
+                      <Button onClick={refreshCases}>Spróbuj ponownie</Button>
+                    </CardContent>
+                  </Card>
+                ) : cases.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-4">Nie masz jeszcze żadnych spraw</p>
+                      <Button onClick={() => setActiveTab("nowa-sprawa")}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Utwórz pierwszą sprawę
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : cases.map((case_) => (
                   <Card
                     key={case_.id}
                     className="hover:shadow-md transition-shadow"
@@ -438,7 +416,10 @@ export default function PanelKlientaPage() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <NewCaseForm onSuccess={() => setActiveTab("sprawy")} />
+                  <NewCaseForm onSuccess={() => {
+                    setActiveTab("sprawy");
+                    refreshCases();
+                  }} />
                 </CardContent>
               </Card>
             </div>

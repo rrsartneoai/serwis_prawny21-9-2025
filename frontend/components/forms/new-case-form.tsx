@@ -58,14 +58,37 @@ export default function NewCaseForm({ onSuccess }: NewCaseFormProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     const validFiles = selectedFiles.filter((file) => {
-      const isValidType =
-        file.type.includes("pdf") || file.type.includes("image");
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword', // .doc
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+        'image/jpeg',
+        'image/jpg', 
+        'image/png'
+      ];
+      
+      const isValidType = allowedTypes.includes(file.type) ||
+        file.type.includes("pdf") || 
+        file.type.includes("image") ||
+        file.name.toLowerCase().endsWith('.doc') ||
+        file.name.toLowerCase().endsWith('.docx');
+      
       const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+      
+      // Check max file count (5 files)
+      if (files.length >= 5) {
+        toast({
+          title: "Zbyt wiele plików",
+          description: "Możesz przesłać maksymalnie 5 plików.",
+          variant: "destructive",
+        });
+        return false;
+      }
 
       if (!isValidType) {
         toast({
           title: "Nieprawidłowy format pliku",
-          description: `Plik ${file.name} ma nieprawidłowy format. Akceptujemy tylko PDF, JPG, PNG.`,
+          description: `Plik ${file.name} ma nieprawidłowy format. Akceptujemy PDF, DOC, DOCX, JPG, PNG.`,
           variant: "destructive",
         });
         return false;
@@ -132,15 +155,6 @@ export default function NewCaseForm({ onSuccess }: NewCaseFormProps) {
     setUploadProgress(0);
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("title", formData.title);
-      formDataToSend.append("description", formData.description);
-      formDataToSend.append("clientNotes", formData.clientNotes);
-
-      files.forEach((file) => {
-        formDataToSend.append("files", file);
-      });
-
       // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
@@ -152,16 +166,20 @@ export default function NewCaseForm({ onSuccess }: NewCaseFormProps) {
         });
       }, 200);
 
-      const response = await fetch("/api/cases", {
-        method: "POST",
-        body: formDataToSend,
+      // Use casesApi instead of direct fetch
+      const { casesApi } = await import("@/lib/api/cases");
+      const result = await casesApi.createCase({
+        title: formData.title,
+        description: formData.description,
+        client_notes: formData.clientNotes,
+        files: files,
       });
 
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      if (!response.ok) {
-        throw new Error("Failed to create case");
+      if (result.error) {
+        throw new Error(result.error);
       }
 
       toast({
@@ -246,7 +264,7 @@ export default function NewCaseForm({ onSuccess }: NewCaseFormProps) {
             multiple
             onChange={handleFileChange}
             className="hidden"
-            accept=".pdf, .jpg, .jpeg, .png"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
           />
           <Label htmlFor="file-upload" className="cursor-pointer block">
             <div className="flex flex-col items-center justify-center space-y-3">

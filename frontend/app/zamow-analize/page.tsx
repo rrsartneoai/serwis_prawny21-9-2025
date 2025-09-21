@@ -2,13 +2,15 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 import {
   Upload,
   FileText,
@@ -22,6 +24,17 @@ export default function ZamowAnalizePage() {
   const [files, setFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
   const [selectedPackage, setSelectedPackage] = useState("standard");
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // Check authentication - redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      // Store current page to redirect back after login
+      localStorage.setItem('redirectAfterLogin', '/zamow-analize');
+      router.push('/logowanie');
+    }
+  }, [isAuthenticated, router]);
 
   const packages = [
     {
@@ -64,7 +77,49 @@ export default function ZamowAnalizePage() {
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(event.target.files || []);
-    setFiles([...files, ...uploadedFiles]);
+    
+    // Validate files
+    const validFiles: File[] = [];
+    uploadedFiles.forEach(file => {
+      // Check file type - include DOC/DOCX support
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword', // .doc
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+        'image/jpeg',
+        'image/jpg', 
+        'image/png'
+      ];
+      
+      const isValidType = allowedTypes.includes(file.type) ||
+        file.type.includes('pdf') || 
+        file.type.includes('image') ||
+        file.name.toLowerCase().endsWith('.doc') ||
+        file.name.toLowerCase().endsWith('.docx');
+      
+      // Check file size (10MB max)
+      const isValidSize = file.size <= 10 * 1024 * 1024;
+      
+      if (!isValidType) {
+        alert(`Plik "${file.name}" ma nieprawidłowy format. Akceptujemy PDF, DOC, DOCX, JPG, PNG.`);
+        return;
+      }
+      
+      if (!isValidSize) {
+        alert(`Plik "${file.name}" jest za duży. Maksymalny rozmiar to 10MB.`);
+        return;
+      }
+      
+      validFiles.push(file);
+    });
+    
+    // Check total file count (max 5)
+    if (files.length + validFiles.length > 5) {
+      alert('Możesz przesłać maksymalnie 5 plików.');
+      return;
+    }
+    
+    setFiles([...files, ...validFiles]);
   };
 
   const removeFile = (index: number) => {
@@ -72,11 +127,58 @@ export default function ZamowAnalizePage() {
   };
 
   const handleNext = () => {
+    // Validation for step 1 - require at least one file
+    if (step === 1) {
+      if (files.length === 0) {
+        alert('Musisz przesłać przynajmniej jeden dokument przed przejściem dalej.');
+        return;
+      }
+    }
+    
+    // Validation for step 2 - require package selection
+    if (step === 2) {
+      if (!selectedPackage) {
+        alert('Wybierz pakiet analizy przed przejściem dalej.');
+        return;
+      }
+    }
+    
     if (step < 3) setStep(step + 1);
   };
 
   const handleBack = () => {
     if (step > 1) setStep(step - 1);
+  };
+
+  const handleSubmitOrder = async () => {
+    // Create case with uploaded files
+    try {
+      const { casesApi } = await import("@/lib/api/cases");
+      const selectedPkg = packages.find(pkg => pkg.id === selectedPackage);
+      
+      const result = await casesApi.createCase({
+        title: `Analiza ${selectedPkg?.name || 'dokumentów'} - ${new Date().toLocaleDateString()}`,
+        description: description || `Zamówiona analiza w pakiecie ${selectedPkg?.name}`,
+        client_notes: description,
+        package_type: selectedPackage,
+        package_price: selectedPkg?.price,
+        files: files,
+      });
+
+      if (result.error) {
+        alert(`Błąd tworzenia sprawy: ${result.error}`);
+        return;
+      }
+
+      if (result.case) {
+        // Store case ID for payment
+        localStorage.setItem('pendingCaseId', result.case.id);
+        // Redirect to payment
+        window.location.href = `/platnosc?caseId=${result.case.id}&amount=${selectedPkg?.price}`;
+      }
+    } catch (error) {
+      alert(`Wystąpił błąd: ${error instanceof Error ? error.message : 'Nieznany błąd'}`);
+    }
   };
 
   return (
@@ -138,7 +240,7 @@ export default function ZamowAnalizePage() {
                   <input
                     type="file"
                     multiple
-                    accept=".pdf,.jpg,.jpeg,.png"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                     onChange={handleFileUpload}
                     className="hidden"
                     id="file-upload"
@@ -416,7 +518,7 @@ export default function ZamowAnalizePage() {
                 </Button>
                 <Button
                   className="flex-1 bg-red-600 hover:bg-red-700"
-                  onClick={() => (window.location.href = "/platnosc")}
+                  onClick={handleSubmitOrder}
                 >
                   Zapłać i Zamów
                 </Button>

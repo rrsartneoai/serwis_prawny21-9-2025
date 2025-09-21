@@ -80,9 +80,14 @@ export class AuthAPIClient {
   ): Promise<T> {
     const url = `${this.baseUrl}/api/v1${endpoint}`;
     
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = {};
+
+    // Auto-detect FormData - don't set Content-Type for FormData (browser will set multipart/form-data)
+    const isFormData = data instanceof FormData;
+    
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (includeAuth && this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
@@ -94,7 +99,11 @@ export class AuthAPIClient {
     };
 
     if (data && method !== 'GET') {
-      config.body = JSON.stringify(data);
+      if (isFormData) {
+        config.body = data; // Send FormData directly
+      } else {
+        config.body = JSON.stringify(data);
+      }
     }
 
     try {

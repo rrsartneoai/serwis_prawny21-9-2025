@@ -1,18 +1,60 @@
 // API client for case management
 import { authAPI } from './auth';
 
+// Enhanced interfaces for frontend compatibility
+export interface Analysis {
+  id: string;
+  caseId: string;
+  content: string;
+  summary: string;
+  recommendations: string[];
+  possibleDocuments: PossibleDocument[];
+  price: number;
+  status: "completed" | "pending" | "in_progress";
+  previewContent: string;
+  createdAt: Date;
+}
+
+export interface PossibleDocument {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  estimatedTime: string;
+  category: string;
+}
+
+// Enhanced Case interface for frontend compatibility
 export interface Case {
-  id: number;
+  id: string; // Convert from number to string for frontend
   title: string;
+  name?: string; // Alias for title
   description?: string;
   client_notes?: string;
-  status: string;
+  clientNotes?: string; // Alias for client_notes
+  status: "draft" | "submitted" | "analyzing" | "analysis_ready" | "completed" | "cancelled" | "documents_ready" | "new" | "rejected";
   package_type?: string;
   package_price?: number;
-  created_at: string;
-  updated_at: string;
-  user_id: number;
-  documents: Document[];
+  created_at?: string;
+  updated_at?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  user_id?: number;
+  client_id?: string;
+  clientId?: string; // Alias for client_id
+  documents: EnhancedDocument[];
+  analysis?: Analysis;
+  generatedDocuments?: EnhancedDocument[];
+}
+
+export interface EnhancedDocument {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+  uploadedAt: Date;
+  size: number;
+  caseId?: string;
 }
 
 export interface Document {
@@ -75,8 +117,9 @@ class CasesApi {
         }
       }
 
-      const response = await authAPI.makeRequest<Case>('POST', '/cases', formData, true, true);
-      return { case: response, error: null };
+      const backendCase = await authAPI.makeRequest<any>('POST', '/cases', formData, true);
+      const caseData = this.transformCase(backendCase);
+      return { case: caseData, error: null };
     } catch (error) {
       return {
         case: null,
@@ -85,9 +128,61 @@ class CasesApi {
     }
   }
 
+  // Transform backend case data to frontend format
+  private transformCase(backendCase: any): Case {
+    return {
+      id: backendCase.id.toString(),
+      title: backendCase.title,
+      name: backendCase.title, // Alias
+      description: backendCase.description,
+      client_notes: backendCase.client_notes,
+      clientNotes: backendCase.client_notes, // Alias
+      status: backendCase.status,
+      package_type: backendCase.package_type,
+      package_price: backendCase.package_price,
+      created_at: backendCase.created_at,
+      updated_at: backendCase.updated_at,
+      createdAt: new Date(backendCase.created_at),
+      updatedAt: new Date(backendCase.updated_at),
+      user_id: backendCase.user_id,
+      client_id: backendCase.client_id?.toString(),
+      clientId: backendCase.client_id?.toString(), // Alias
+      documents: (backendCase.documents || []).map((doc: Document) => ({
+        id: doc.id.toString(),
+        name: doc.original_filename || doc.filename,
+        type: doc.file_type,
+        url: `/api/v1/cases/${backendCase.id}/documents/${doc.id}/download`,
+        uploadedAt: new Date(doc.uploaded_at),
+        size: doc.file_size,
+        caseId: backendCase.id.toString(),
+      })),
+      analysis: backendCase.analysis ? {
+        id: backendCase.analysis.id.toString(),
+        caseId: backendCase.id.toString(),
+        content: backendCase.analysis.content || '',
+        summary: backendCase.analysis.summary || '',
+        recommendations: backendCase.analysis.recommendations || [],
+        possibleDocuments: (backendCase.analysis.possible_documents || []).map((doc: any) => ({
+          id: doc.id?.toString() || Math.random().toString(),
+          name: doc.name || doc.title || '',
+          description: doc.description || '',
+          price: doc.price || 0,
+          estimatedTime: doc.estimated_time || doc.estimatedTime || '',
+          category: doc.category || '',
+        })),
+        price: backendCase.analysis.price || 0,
+        status: backendCase.analysis.status || 'pending',
+        previewContent: backendCase.analysis.preview_content || backendCase.analysis.content?.substring(0, 200) + '...',
+        createdAt: new Date(backendCase.analysis.created_at),
+      } : undefined,
+      generatedDocuments: [],
+    };
+  }
+
   async getCases(): Promise<CasesResponse> {
     try {
-      const cases = await authAPI.makeRequest<Case[]>('GET', '/cases', null, true);
+      const backendCases = await authAPI.makeRequest<any[]>('GET', '/cases', null, true);
+      const cases = backendCases.map(this.transformCase.bind(this));
       return { cases, error: null };
     } catch (error) {
       return {
@@ -99,7 +194,8 @@ class CasesApi {
 
   async getCase(caseId: number): Promise<CaseResponse> {
     try {
-      const caseData = await authAPI.makeRequest<Case>('GET', `/cases/${caseId}`, null, true);
+      const backendCase = await authAPI.makeRequest<any>('GET', `/cases/${caseId}`, null, true);
+      const caseData = this.transformCase(backendCase);
       return { case: caseData, error: null };
     } catch (error) {
       return {
