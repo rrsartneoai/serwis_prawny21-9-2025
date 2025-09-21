@@ -1,6 +1,11 @@
 from fastapi import FastAPI
 from sqlalchemy.orm import Session
 from fastapi import Depends
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from app.db.database import Base, engine, get_db
 from app.models import kancelaria, user, case, payment, notification # Import models to ensure they are registered with SQLAlchemy
