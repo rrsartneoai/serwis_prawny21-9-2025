@@ -9,6 +9,8 @@ import { useAuth } from "@/lib/auth";
 import { casesApi, type Case } from "@/lib/api/cases";
 import { paymentsApi, type Payment } from "@/lib/api/payments";
 import { notificationsApi, type Notification } from "@/lib/api/notifications";
+import { MessagingInterface } from "@/components/messaging/messaging-interface";
+import { MessageList } from "@/components/messaging/message-list";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -43,6 +45,7 @@ export default function PanelKlientaPage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const router = useRouter();
 
   // Redirect to login if not authenticated
@@ -620,83 +623,39 @@ export default function PanelKlientaPage() {
 
           {/* Messages Section */}
           {activeTab === "wiadomosci" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Wiadomości
-                  {unreadCount > 0 && (
-                    <Badge className="ml-2 bg-red-100 text-red-800">
-                      {unreadCount} nowe
-                    </Badge>
-                  )}
-                </h1>
-                <Button onClick={refreshNotifications}>
-                  Odśwież
-                </Button>
+            <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Message List */}
+              <div className="lg:col-span-1">
+                <MessageList
+                  currentUserRole="client"
+                  onSelectConversation={(conversation) => {
+                    setSelectedConversation(conversation);
+                  }}
+                  selectedConversationId={selectedConversation?.id}
+                  className="h-96 lg:h-full"
+                />
               </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {loading ? (
-                  <Card>
-                    <CardContent className="p-6 text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-gray-600">Ładowanie wiadomości...</p>
-                    </CardContent>
-                  </Card>
-                ) : notifications.length === 0 ? (
-                  <Card>
-                    <CardContent className="p-6 text-center">
+              
+              {/* Messaging Interface */}
+              <div className="lg:col-span-2">
+                {selectedConversation ? (
+                  <MessagingInterface
+                    currentUserId={user?.id?.toString() || ""}
+                    currentUserRole="client"
+                    caseId={selectedConversation.case_id}
+                    recipientId={selectedConversation.participant_id.toString()}
+                    recipientName={selectedConversation.participant_name}
+                    className="h-96 lg:h-full"
+                  />
+                ) : (
+                  <Card className="h-96 lg:h-full flex items-center justify-center">
+                    <CardContent className="text-center">
                       <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-4">Nie masz jeszcze żadnych wiadomości</p>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Wybierz rozmowę</h3>
+                      <p className="text-gray-600">Kliknij na rozmowę z lewej strony, aby rozpocząć czat</p>
                     </CardContent>
                   </Card>
-                ) : notifications.map((notification) => (
-                  <Card 
-                    key={notification.id} 
-                    className={`hover:shadow-md transition-shadow ${!notification.read_at ? 'border-blue-200 bg-blue-50' : ''}`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center">
-                          <MessageSquare className="h-4 w-4 text-blue-500 mr-2" />
-                          <h4 className="font-medium">
-                            {notification.subject || notification.template}
-                          </h4>
-                          {!notification.read_at && (
-                            <Badge className="ml-2 bg-blue-100 text-blue-800 text-xs">
-                              Nowe
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-xs text-gray-500">
-                          {new Date(notification.created_at).toLocaleDateString('pl-PL')}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-700 mb-2">{notification.content}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-500">
-                          {notification.type.toUpperCase()}
-                        </span>
-                        {!notification.read_at && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={async () => {
-                              try {
-                                await notificationsApi.markAsRead(notification.id);
-                                await refreshNotifications();
-                              } catch (error) {
-                                console.error('Failed to mark as read:', error);
-                              }
-                            }}
-                          >
-                            Oznacz jako przeczytane
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                )}
               </div>
             </div>
           )}
