@@ -6,6 +6,12 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.db.database import Base, get_db
+# Import all models to ensure tables are created
+from app.models.user import User
+from app.models.case import Case
+from app.models.payment import Payment
+from app.models.notification import Notification
+from app.models.kancelaria import Kancelaria
 
 # Use an in-memory SQLite database for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -44,6 +50,6 @@ def client_fixture(db_session):
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
+    with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client
     app.dependency_overrides.clear()

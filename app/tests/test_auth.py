@@ -232,3 +232,124 @@ def test_inactive_user_login(client, db_session):
         json={"email": "inactive@example.com", "password": "testpass123"}
     )
     assert response.status_code == 401
+
+def test_existing_user_wrong_password(client, db_session):
+    """Test login with existing user but wrong password"""
+    # Create user
+    hashed_password = get_password_hash("correctpass123")
+    user = User(
+        email="existing@example.com",
+        hashed_password=hashed_password,
+        first_name="Existing",
+        last_name="User",
+        auth_provider=AuthProvider.EMAIL,
+        is_verified=True,
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    
+    # Try to login with wrong password
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "existing@example.com", "password": "wrongpass123"}
+    )
+    assert response.status_code == 401
+    assert "invalid credentials" in response.json()["detail"].lower()
+
+def test_unverified_user_login_behavior(client, db_session):
+    """Test login behavior for unverified users"""
+    # Create unverified user
+    hashed_password = get_password_hash("testpass123")
+    user = User(
+        email="unverified@example.com",
+        hashed_password=hashed_password,
+        first_name="Unverified",
+        last_name="User",
+        auth_provider=AuthProvider.EMAIL,
+        is_verified=False,  # User is not verified
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "unverified@example.com", "password": "testpass123"}
+    )
+    
+    # Depending on implementation, this might succeed but require verification
+    # or be rejected outright - we test the expected behavior
+    if response.status_code == 200:
+        data = response.json()
+        # If login succeeds, it should indicate verification is required
+        assert data.get("requires_verification") == True
+        assert data["user"]["is_verified"] == False
+    else:
+        # If login is rejected for unverified users
+        assert response.status_code in [401, 403]
+
+def test_expired_token_access(client, db_session):
+    """Test access with expired JWT token"""
+    # Create user
+    hashed_password = get_password_hash("testpass123")
+    user = User(
+        email="expire@example.com",
+        hashed_password=hashed_password,
+        first_name="Expire",
+        last_name="User",
+        auth_provider=AuthProvider.EMAIL,
+        is_verified=True,
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    
+    # Create expired token (negative timedelta)
+    expired_token = create_access_token(
+        subject=str(user.id),
+        expires_delta=timedelta(seconds=-1)  # Already expired
+    )
+    
+    response = client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {expired_token}"}
+    )
+    # Expired token should be rejected
+    assert response.status_code == 401
+
+def test_token_without_sub_claim(client, db_session):
+    """Test JWT token without subject claim"""
+    from jose import jwt
+    from app.core.security import SECRET_KEY, ALGORITHM
+    from datetime import datetime
+    
+    # Create token without 'sub' claim
+    payload = {
+        "exp": datetime.utcnow() + timedelta(minutes=30),
+        # Missing 'sub' claim
+    }
+    malformed_token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    
+    response = client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {malformed_token}"}
+    )
+    # Should be rejected due to missing subject
+    assert response.status_code == 401
+
+def test_token_with_nonexistent_user_id(client, db_session):
+    """Test JWT token with user ID that doesn't exist"""
+    # Create token with non-existent user ID
+    nonexistent_token = create_access_token(
+        subject="99999",  # User ID that doesn't exist
+        expires_delta=timedelta(minutes=30)
+    )
+    
+    response = client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {nonexistent_token}"}
+    )
+    # Should be rejected - user not found
+    assert response.status_code == 401
