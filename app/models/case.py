@@ -46,7 +46,7 @@ class Case(Base):
     
     # Foreign key to user
     user_id = Column(Integer, ForeignKey("users.id"))
-    user = relationship("User", back_populates="cases")
+    user = relationship("User", foreign_keys=[user_id], back_populates="cases")
     
     # Assigned operator
     operator_id = Column(Integer, ForeignKey("users.id"), nullable=True)

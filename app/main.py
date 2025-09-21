@@ -24,7 +24,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.api.v1.endpoints import kancelarie, users, cases
+from app.api.v1.endpoints import kancelarie, users, cases, auth
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
 app.include_router(kancelarie.router, prefix="/api/v1/kancelarie", tags=["kancelarie"])
 app.include_router(kancelarie.router, prefix="/api/v1/law-firms", tags=["law-firms"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])

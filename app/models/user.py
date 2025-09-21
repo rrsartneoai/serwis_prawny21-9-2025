@@ -35,8 +35,8 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
     
-    # Relationship to cases
-    cases = relationship("Case", back_populates="user", cascade="all, delete-orphan")
+    # Relationship to cases (only as owner, not operator)
+    cases = relationship("Case", foreign_keys="Case.user_id", back_populates="user", cascade="all, delete-orphan")
     
     # Relationship to payments
     payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
