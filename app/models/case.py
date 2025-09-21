@@ -5,6 +5,11 @@ import enum
 
 from app.db.database import Base
 
+# Configuration constants for document limits
+MAX_FILE_SIZE_MB = 50  # Maximum file size in MB
+MAX_FILES_PER_CASE = 10  # Maximum number of files per case
+ALLOWED_FILE_TYPES = [".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".doc", ".docx"]
+
 class CaseStatus(enum.Enum):
     NEW = "new"
     AWAITING_PAYMENT = "awaiting_payment"
@@ -66,6 +71,12 @@ class Case(Base):
     
     # Relationship to notifications
     notifications = relationship("Notification", back_populates="case", cascade="all, delete-orphan")
+    
+    # Relationship to comments
+    comments = relationship("CaseComment", cascade="all, delete-orphan")
+    
+    # Relationship to status history
+    status_history = relationship("CaseStatusHistory", cascade="all, delete-orphan")
 
 class Document(Base):
     __tablename__ = "documents"
@@ -127,3 +138,52 @@ class LegalDocument(Base):
     operator = relationship("User")
     
     case = relationship("Case", back_populates="legal_documents")
+
+
+class CaseComment(Base):
+    __tablename__ = "case_comments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    case_id = Column(Integer, ForeignKey("cases.id"))
+    analysis_id = Column(Integer, ForeignKey("analysis.id"), nullable=True)  # Comment on specific analysis
+    legal_document_id = Column(Integer, ForeignKey("legal_documents.id"), nullable=True)  # Comment on specific document
+    
+    # Author
+    author_user_id = Column(Integer, ForeignKey("users.id"))
+    
+    # Content
+    content = Column(Text)
+    is_internal = Column(Boolean, default=False)  # True for operator notes, False for client comments
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    case = relationship("Case")
+    analysis = relationship("Analysis")
+    legal_document = relationship("LegalDocument")
+    author = relationship("User")
+
+
+class CaseStatusHistory(Base):
+    __tablename__ = "case_status_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    case_id = Column(Integer, ForeignKey("cases.id"), index=True)
+    
+    # Status change details
+    from_status = Column(Enum(CaseStatus), nullable=True)  # Null for initial creation
+    to_status = Column(Enum(CaseStatus))
+    
+    # Who made the change
+    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Null for system changes
+    
+    # Additional context
+    reason = Column(Text, nullable=True)
+    extra_data = Column(Text, nullable=True)  # JSON string for additional data
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    case = relationship("Case")
+    actor = relationship("User")

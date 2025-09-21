@@ -61,7 +61,7 @@ class Notification(Base):
     
     # Relationships
     user = relationship("User", back_populates="notifications")
-    case = relationship("Case")
+    case = relationship("Case", back_populates="notifications")
 
 
 class NotificationTemplate(Base):

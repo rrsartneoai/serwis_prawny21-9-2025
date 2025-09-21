@@ -6,7 +6,7 @@ packages = ["libxcrypt"]
 
 [agent]
 expertMode = true
-integrations = ["python_database:1.0.0", "twilio_send_message:1.0.0"]
+integrations = ["python_database:1.0.0", "twilio_send_message:1.0.0", "python_log_in_with_replit:1.0.0"]
 
 [workflows]
 runButton = "Project"
@@ -60,10 +60,6 @@ exposeLocalhost = true
 [[ports]]
 localPort = 37539
 externalPort = 3000
-
-[[ports]]
-localPort = 41861
-externalPort = 3001
 
 [deployment]
 deploymentTarget = "autoscale"

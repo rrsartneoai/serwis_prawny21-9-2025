@@ -19,3 +19,7 @@ python-dotenv==1.0.1
 python-jose[cryptography]==3.3.0
 SQLAlchemy==2.0.30
 uvicorn==0.29.0
+flask-dance
+flask-login
+oauthlib
+pyjwt
