@@ -1,99 +1,173 @@
-# Kancelaria API
+# Serwis Prawny 21-9-2025
 
-This project implements a RESTful API for managing law firms and clients, built with FastAPI.
+## Opis projektu
 
-## Project Structure
+**Serwis Prawny 21-9-2025** to nowoczesna platforma programistyczna, której celem jest cyfryzacja usług prawnych i automatyzacja procesów związanych z obsługą prawną. Projekt został zaprojektowany z myślą o kancelariach prawnych, firmach oraz klientach indywidualnych, którzy poszukują szybkiego i profesjonalnego wsparcia w zakresie prawa, dokumentów oraz komunikacji z ekspertami.
+
+Repozytorium publiczne: [serwis_prawny21-9-2025](https://github.com/rrsartneoai/serwis_prawny21-9-2025)
+
+---
+
+## Drzewo projektu
 
 ```
-kancelaria/
+serwis_prawny21-9-2025/
 │
-├── app/
-│   ├── main.py                 # Main FastAPI application
-│   ├── api/
+├── app/                       # Backend FastAPI
+│   ├── main.py                # Główna aplikacja FastAPI
+│   ├── api/                   # Endpointy API
 │   │   └── v1/
-│   │       ├── endpoints/      # API endpoints (e.g., kancelarie.py)
-│   │           └── kancelarie.py
-│   │       └── schemas/        # Pydantic schemas for data validation
-│   │           └── kancelaria.py
-│   ├── core/                   # Core configurations, settings, security
-│   ├── models/                 # Database models (e.g., SQLAlchemy models)
-│   ├── db/                     # Database connection and session management
-│   └── tests/                  # Unit and integration tests
+│   │       ├── endpoints/
+│   │       └── schemas/
+│   ├── core/                  # Konfiguracje, bezpieczeństwo
+│   ├── db/                    # Obsługa bazy danych
+│   ├── models/                # Modele SQLAlchemy
+│   └── tests/                 # Testy jednostkowe
 │
-├── sdk/                        # Generated client SDKs
-│   └── python/
-│   └── js/
+├── frontend/                  # Frontend Next.js
+│   ├── package.json           # Zależności frontendu
+│   ├── lib/                   # Logika komunikacji z backendem
+│   ├── pages/                 # Strony aplikacji
+│   ├── components/            # Komponenty UI
+│   └── public/                # Statyczne zasoby
 │
-├── snippets-generator/         # Application for generating code snippets
-│   └── (e.g., React app)
-│
-├── openapi.yaml                # OpenAPI specification file
-├── requirements.txt            # Python dependencies
-└── README.md                   # Project README
+├── requirements.txt           # Zależności backendu (Python)
+├── README.md                  # Dokumentacja techniczna
+├── OPIS.md                    # Opis projektu i dokumentacja biznesowa
+├── openapi.yaml               # Specyfikacja OpenAPI
+├── .replit                    # Konfiguracja Replit
+├── replit.md                  # Instrukcja i opis konfiguracji
+└── sdk/                       # Generowany SDK (klient)
+    ├── python/
+    └── js/
 ```
 
-## Setup and Installation
+---
 
-1.  **Navigate to the project directory:**
-    ```bash
-    cd kancelaria
-    ```
+## Główne funkcjonalności
 
-2.  **Create a virtual environment (recommended):**
-    ```bash
-    python -m venv venv
-    ```
+1. **Generowanie i obsługa dokumentów prawnych**
+   - Automatyczne generowanie dokumentów (umowy, pisma, wnioski)
+   - Edycja i wersjonowanie dokumentów
+   - Elektroniczne archiwum dokumentów
 
-3.  **Activate the virtual environment:**
-    *   **Windows:**
-        ```bash
-        .\venv\Scripts\activate
-        ```
-    *   **macOS/Linux:**
-        ```bash
-        source venv/bin/activate
-        ```
+2. **System komunikacji z prawnikiem**
+   - Bezpieczna komunikacja tekstowa oraz wideo
+   - Integracja z powiadomieniami i kalendarzem spotkań
 
-4.  **Install backend dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+3. **Panel klienta oraz kancelarii**
+   - Zarządzanie sprawami, dokumentacją i kontaktami
+   - Automatyczna klasyfikacja spraw według statusu i rodzaju
 
-5.  **Install frontend dependencies:**
-    ```bash
-    cd frontend
-    pnpm install
-    ```
+4. **Automatyzacja procesów prawnych**
+   - Wykorzystanie AI do analizy dokumentów oraz wsparcia merytorycznego
+   - Szybkie wyszukiwanie aktów prawnych i interpretacji
 
-## Running the Application
+5. **Bezpieczeństwo i zgodność z RODO**
+   - Szyfrowanie danych
+   - Pełna zgodność z przepisami RODO i wymogami bezpieczeństwa informacji
 
-To run the FastAPI application using Uvicorn:
+---
 
-```bash
-uvicorn app.main:app --reload
-```
+## Architektura techniczna
 
-The API will be accessible at `http://127.0.0.1:8000`.
-The interactive API documentation (Swagger UI) will be available at `http://127.0.0.1:8000/api/v1/docs`.
+- **Język programowania:** TypeScript (frontend), Python (backend)
+- **Struktura repozytorium:** Monorepo z podziałem na frontend (`/frontend`, Next.js) i backend (`/app`, FastAPI)
+- **Front-end:** Nowoczesny interfejs użytkownika oparty o Next.js, React, Tailwind CSS, shadcn/ui
+- **Back-end:** API w FastAPI, SQLAlchemy ORM, Pydantic (walidacja), JWT (autoryzacja)
+- **Baza danych:** SQLite (możliwość rozbudowy)
+- **Integracje:** Supabase, możliwość podłączenia z zewnętrznymi usługami prawnymi oraz AI
 
-## API Endpoints (v1)
+---
 
-*   `/api/v1/kancelarie/`
-    *   `POST /` - Create a new law firm.
-    *   `GET /` - Retrieve a list of all law firms.
-    *   `GET /{kancelaria_id}` - Retrieve a specific law firm by ID.
-    *   `PUT /{kancelaria_id}` - Update an existing law firm by ID.
-    *   `DELETE /{kancelaria_id}` - Delete a law firm by ID.
+## Zastosowanie
 
-## OpenAPI Specification
+Serwis dedykowany jest dla:
+- Kancelarii prawnych i doradców
+- Firm i działów HR/Compliance
+- Klientów indywidualnych szukających szybkiego wsparcia prawnego
 
-The OpenAPI specification is automatically generated by FastAPI and can be found at `/api/v1/openapi.json`. A static version will also be maintained in `openapi.yaml`.
+---
 
-## Next Steps
+## Instalacja i uruchomienie
 
-*   Implement database integration (SQLAlchemy).
-*   Add authentication and authorization (JWT/OAuth2).
-*   Write comprehensive tests.
-*   Set up CI/CD pipelines.
-*   Develop the SDK generation script.
-*   Create the snippets generator.
+### Instalacja Frontendu
+
+1. Skopiuj repozytorium:
+   ```bash
+   git clone https://github.com/rrsartneoai/serwis_prawny21-9-2025.git
+   ```
+2. Przejdź do katalogu frontend:
+   ```bash
+   cd serwis_prawny21-9-2025/frontend
+   ```
+3. Zainstaluj zależności:
+   ```bash
+   npm install
+   ```
+   lub (jeśli używasz pnpm):
+   ```bash
+   pnpm install
+   ```
+4. Uruchom aplikację frontendową:
+   ```bash
+   npm run dev
+   ```
+   Domyślnie frontend działa na porcie `5000`.
+
+---
+
+### Instalacja Backend-u
+
+1. Przejdź do katalogu backendu:
+   ```bash
+   cd serwis_prawny21-9-2025/app
+   ```
+2. Utwórz i aktywuj środowisko wirtualne (zalecane):
+   - Linux/macOS:
+     ```bash
+     python -m venv venv
+     source venv/bin/activate
+     ```
+   - Windows:
+     ```bash
+     python -m venv venv
+     .\venv\Scripts\activate
+     ```
+3. Zainstaluj zależności backendu:
+   ```bash
+   pip install -r ../requirements.txt
+   ```
+4. Uruchom backend FastAPI:
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+   Backend domyślnie działa na porcie `8000`.
+
+---
+
+## Dostęp do aplikacji
+
+- **Frontend:** http://localhost:5000
+- **Backend API:** http://localhost:8000
+- **Dokumentacja Swagger:** http://localhost:8000/api/v1/docs
+
+---
+
+## Wkład i rozwój projektu
+
+Projekt jest otwarty na współpracę i rozwój. Zachęcamy do zgłaszania problemów, propozycji nowych funkcji oraz udziału w rozwoju kodu.
+
+---
+
+## Licencja
+
+Brak zdefiniowanej licencji. W przypadku chęci komercyjnego wykorzystania, skontaktuj się z właścicielem repozytorium.
+
+---
+
+## Kontakt
+
+Właściciel repozytorium: [rrsartneoai](https://github.com/rrsartneoai)
+
+---
