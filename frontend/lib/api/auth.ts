@@ -118,12 +118,9 @@ export class AuthAPIClient {
   // Email/Password Authentication
   async register(email: string, password: string, firstName?: string, lastName?: string): Promise<ApiResponse<AuthResponse>> {
     try {
-      const response = await this.makeRequest<AuthResponse>('POST', '/auth/register', {
+      const response = await this.makeRequest<AuthResponse>('POST', '/users/register/', {
         email,
-        password,
-        first_name: firstName,
-        last_name: lastName,
-        auth_provider: 'email'
+        password
       });
       
       if (response.access_token) {
@@ -141,13 +138,19 @@ export class AuthAPIClient {
 
   async login(email: string, password: string): Promise<ApiResponse<AuthResponse>> {
     try {
-      const response = await this.makeRequest<AuthResponse>('POST', '/auth/login', {
-        email,
-        password
-      });
+      // FastAPI OAuth2PasswordRequestForm expects form data with username/password
+      const formData = new FormData();
+      formData.append('username', email); 
+      formData.append('password', password);
+      
+      const response = await this.makeRequest<any>('POST', '/users/token', formData);
       
       if (response.access_token) {
         this.token = response.access_token;
+        // Store token in localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth-token', response.access_token);
+        }
       }
       
       return { data: response, error: null };
@@ -260,7 +263,7 @@ export class AuthAPIClient {
     }
 
     try {
-      const user = await this.makeRequest<User>('GET', '/auth/me', null, true);
+      const user = await this.makeRequest<User>('GET', '/users/me/', null, true);
       return { data: user, error: null };
     } catch (error) {
       return { 

@@ -9,17 +9,20 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Remove standalone output for development
   // Configure for Replit environment - Next.js automatically allows all hosts in development
-  // Configure hostname and port
+  // Proxy API calls to local backend server
   async rewrites() {
-    const backendUrl = process.env.BACKEND_URL || `https://${process.env.REPLIT_DEV_DOMAIN || 'localhost:8000'}/api`;
     return [
       {
         source: '/api/:path*',
-        destination: `${backendUrl}/:path*`
+        destination: 'http://localhost:8000/api/:path*'
       }
     ]
+  },
+  // Increase header limits to prevent overflow
+  serverRuntimeConfig: {
+    // Increase max header size
+    maxHeaderSize: 32768 // 32KB instead of default 8KB
   },
 }
 
