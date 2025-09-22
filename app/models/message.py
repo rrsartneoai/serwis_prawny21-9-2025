@@ -49,6 +49,9 @@ class Message(Base):
     # Case reference (optional)
     case_id = Column(Integer, ForeignKey("cases.id"), nullable=True)
     
+    # Thread reference (optional)
+    thread_id = Column(Integer, ForeignKey("message_threads.id"), nullable=True)
+    
     # Message status
     status = Column(Enum(MessageStatus), default=MessageStatus.SENT, nullable=False)
     is_internal = Column(Boolean, default=False)  # Internal messages between staff
@@ -65,7 +68,8 @@ class Message(Base):
     # Relationships
     sender = relationship("User", foreign_keys=[sender_id], back_populates="sent_messages")
     recipient = relationship("User", foreign_keys=[recipient_id], back_populates="received_messages")
-    case = relationship("Case", back_populates="messages")
+    case = relationship("Case", back_populates="messages", overlaps="comments,status_history")
+    thread = relationship("MessageThread", foreign_keys=[thread_id], back_populates="messages")
 
 class MessageThread(Base):
     """Message thread for grouping related messages"""
