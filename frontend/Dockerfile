@@ -1,14 +1,19 @@
-# Frontend Dockerfile for Next.js Legal Services Platform
+# Frontend Dockerfile for Next.js Legal Services Platform  
 FROM node:20-alpine AS base
 
-# Install dependencies only when needed
+# Install dependencies for cross-platform compatibility
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/cache/apk/*
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --only=production --ignore-scripts
 
 # Development stage
 FROM base AS dev
