@@ -14,7 +14,7 @@ This is a full-stack legal services platform built with Next.js frontend and Fas
 - **Authentication**: Full working registration and login system with email verification
 - **Deployment**: Configured for autoscale deployment targeting the frontend
 
-## Recent Changes (September 21, 2025)
+## Recent Changes (September 22, 2025)
 - ✅ **Fresh GitHub import setup completed successfully**
 - ✅ Installed Python 3.11 and Node.js 20 modules
 - ✅ Cleaned up duplicate requirements.txt entries (removed duplicates)
@@ -26,6 +26,7 @@ This is a full-stack legal services platform built with Next.js frontend and Fas
 - ✅ Backend responding with HTTP 200 OK status on port 8000
 - ✅ Frontend Next.js server ready on port 5000, compiling pages correctly
 - ✅ Verified Next.js configuration is compatible with Replit environment (allows all hosts)
+- ✅ **Fixed frontend-backend communication**: Updated API client to use Next.js proxy instead of direct port 8000 access
 - ✅ Configured autoscale deployment settings for production with frontend build/start
 - ✅ Application accessible and functional through web interface
 - ✅ **Project is fully operational in Replit environment**
