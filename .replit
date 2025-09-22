@@ -40,13 +40,13 @@ outputType = "webview"
 name = "Backend"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
-waitForPort = 8000
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+waitForPort = 8000
 
 [[ports]]
 localPort = 5000
@@ -58,7 +58,7 @@ externalPort = 8000
 exposeLocalhost = true
 
 [[ports]]
-localPort = 38427
+localPort = 34603
 externalPort = 3000
 
 [deployment]
