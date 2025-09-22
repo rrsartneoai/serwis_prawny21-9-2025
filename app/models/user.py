@@ -43,6 +43,10 @@ class User(Base):
     
     # Relationship to notifications
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    
+    # Relationship to messages
+    sent_messages = relationship("Message", foreign_keys="Message.sender_id", back_populates="sender")
+    received_messages = relationship("Message", foreign_keys="Message.recipient_id", back_populates="recipient")
 
 
 class VerificationCode(Base):

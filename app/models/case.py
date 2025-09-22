@@ -73,6 +73,9 @@ class Case(Base):
     # Relationship to notifications
     notifications = relationship("Notification", back_populates="case", cascade="all, delete-orphan")
     
+    # Relationship to messages (with overlaps to prevent SQLAlchemy warnings)
+    messages = relationship("Message", back_populates="case", overlaps="comments,status_history")
+    
     # Relationship to comments
     comments = relationship("CaseComment", cascade="all, delete-orphan")
     

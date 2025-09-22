@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "bash", "python-3.11", "postgresql-16"]
+modules = ["nodejs-20", "web", "bash", "python-3.11"]
 
 [nix]
 channel = "stable-25_05"
@@ -40,13 +40,13 @@ outputType = "webview"
 name = "Backend"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
-waitForPort = 8000
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+waitForPort = 8000
 
 [[ports]]
 localPort = 5000
@@ -58,10 +58,10 @@ externalPort = 8000
 exposeLocalhost = true
 
 [[ports]]
-localPort = 38427
+localPort = 34345
 externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 & cd frontend && npm run start"]
-build = ["bash", "-c", "cd frontend && npm run build && cd .. && echo 'Build completed'"]
+run = ["bash", "-c", "cd frontend && npm start"]
+build = ["cd frontend", "npm run build"]
