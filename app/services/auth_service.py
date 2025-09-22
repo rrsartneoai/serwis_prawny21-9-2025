@@ -239,11 +239,17 @@ class SMSService:
     @staticmethod
     async def send_sms_verification(phone: str, code: str) -> bool:
         """Send SMS verification code"""
-        # This will be integrated with Twilio or similar service
         message = f"Twój kod weryfikacyjny do Prawnik AI: {code}. Kod wygasa za 10 minut."
         
-        # For now, just log the code (in production, integrate with Twilio)
-        print(f"SMS to {phone}: {message}")
+        # Make verification codes more visible in console
+        print("\n" + "="*60)
+        print(f"📱 KOD WERYFIKACYJNY SMS DLA: {phone}")
+        print(f"📞 Telefon: {phone}")
+        print(f"🔢 Kod: {code}")
+        print(f"⏰ Ważność: 10 minut")
+        print("="*60 + "\n")
+        
+        # This will be integrated with Twilio or similar service
         return True
 
 
@@ -266,6 +272,13 @@ class EmailService:
         Zespół Prawnik AI
         """
         
+        # Make verification codes more visible in console
+        print("\n" + "="*60)
+        print(f"🔑 KOD WERYFIKACYJNY DLA: {email}")
+        print(f"📧 Email: {email}")
+        print(f"🔢 Kod: {code}")
+        print(f"⏰ Ważność: 10 minut")
+        print("="*60 + "\n")
+        
         # This will be integrated with Replit Mail or similar service
-        print(f"Email to {email}: {subject} - {message}")
         return True
