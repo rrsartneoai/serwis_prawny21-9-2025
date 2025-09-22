@@ -9,6 +9,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Prevent Next.js from automatically redirecting trailing slashes
+  trailingSlash: false,
+  skipTrailingSlashRedirect: true,
   // Configure for Replit environment - Next.js automatically allows all hosts in development
   // Proxy API calls to local backend server
   async rewrites() {

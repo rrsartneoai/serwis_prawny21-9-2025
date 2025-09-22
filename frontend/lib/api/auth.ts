@@ -118,16 +118,31 @@ export class AuthAPIClient {
   // Email/Password Authentication
   async register(email: string, password: string, firstName?: string, lastName?: string): Promise<ApiResponse<AuthResponse>> {
     try {
-      const response = await this.makeRequest<AuthResponse>('POST', '/users/register/', {
+      const tokenResponse = await this.makeRequest<any>('POST', '/users/register/', {
         email,
         password
       });
       
-      if (response.access_token) {
-        this.token = response.access_token;
+      if (tokenResponse.access_token) {
+        this.token = tokenResponse.access_token;
+        // Store token in localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth-token', tokenResponse.access_token);
+        }
+        
+        // Get user info with the token
+        const userResponse = await this.getCurrentUser();
+        if (userResponse.data) {
+          const authResponse = {
+            user: userResponse.data,
+            access_token: tokenResponse.access_token,
+            requires_verification: false
+          };
+          return { data: authResponse, error: null };
+        }
       }
       
-      return { data: response, error: null };
+      return { data: null, error: 'Registration successful but failed to get user info' };
     } catch (error) {
       return { 
         data: null, 
@@ -143,17 +158,28 @@ export class AuthAPIClient {
       formData.append('username', email); 
       formData.append('password', password);
       
-      const response = await this.makeRequest<any>('POST', '/users/token', formData);
+      const tokenResponse = await this.makeRequest<any>('POST', '/users/token', formData);
       
-      if (response.access_token) {
-        this.token = response.access_token;
+      if (tokenResponse.access_token) {
+        this.token = tokenResponse.access_token;
         // Store token in localStorage
         if (typeof window !== 'undefined') {
-          localStorage.setItem('auth-token', response.access_token);
+          localStorage.setItem('auth-token', tokenResponse.access_token);
+        }
+        
+        // Get user info with the token
+        const userResponse = await this.getCurrentUser();
+        if (userResponse.data) {
+          const authResponse = {
+            user: userResponse.data,
+            access_token: tokenResponse.access_token,
+            requires_verification: false
+          };
+          return { data: authResponse, error: null };
         }
       }
       
-      return { data: response, error: null };
+      return { data: null, error: 'Login successful but failed to get user info' };
     } catch (error) {
       return { 
         data: null, 
