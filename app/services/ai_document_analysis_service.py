@@ -8,13 +8,18 @@ import io
 import logging
 from typing import Optional, Dict, Any, List, Tuple
 from datetime import datetime
+import json
+import re
 try:
     from google import genai
 except ImportError:
     genai = None
 import fitz  # PyMuPDF
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
+import cv2
+import numpy as np
+from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.models.case import Case, Document, Analysis, DocumentType
@@ -50,14 +55,76 @@ class AIDocumentAnalysisService:
             logger.error(f"Błąd podczas ekstraktowania tekstu z PDF {file_path}: {e}")
             return ""
     
-    def extract_text_from_image(self, file_path: str) -> str:
-        """Ekstrakt tekstu z obrazu za pomocą OCR (Tesseract)"""
+    def preprocess_image_for_ocr(self, image_path: str) -> Image.Image:
+        """Ulepszone przetwarzanie obrazu przed OCR"""
         try:
-            image = Image.open(file_path)
-            # Konfiguracja OCR dla polskiego języka
-            config = '-l pol --oem 3 --psm 6'
-            text = pytesseract.image_to_string(image, config=config)
-            return text.strip()
+            # Wczytaj obraz z OpenCV
+            img = cv2.imread(image_path)
+            if img is None:
+                raise Exception(f"Nie można wczytać obrazu: {image_path}")
+            
+            # Konwertuj do skali szarości
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            
+            # Zastosuj threshold dla lepszego kontrastu
+            _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            
+            # Usuń szum
+            denoised = cv2.medianBlur(thresh, 5)
+            
+            # Skaluj obraz jeśli jest za mały (lepsze wyniki OCR)
+            height, width = denoised.shape
+            if height < 1000 or width < 1000:
+                scale_factor = 1000 / min(height, width)
+                new_width = int(width * scale_factor)
+                new_height = int(height * scale_factor)
+                denoised = cv2.resize(denoised, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+            
+            # Konwertuj z powrotem do PIL
+            return Image.fromarray(denoised)
+            
+        except Exception as e:
+            logger.warning(f"Błąd podczas preprocessingu obrazu {image_path}: {e}. Używam oryginalnego.")
+            return Image.open(image_path)
+
+    def extract_text_from_image(self, file_path: str) -> str:
+        """Ulepszona ekstrakcja tekstu z obrazu za pomocą OCR"""
+        try:
+            # Przetwórz obraz dla lepszego OCR
+            processed_image = self.preprocess_image_for_ocr(file_path)
+            
+            # Różne konfiguracje OCR dla różnych przypadków
+            configs = [
+                '-l pol --oem 3 --psm 6',  # Standardowa konfiguracja
+                '-l pol --oem 3 --psm 4',  # Single column
+                '-l pol --oem 3 --psm 1',  # Automatic page segmentation with OSD
+                '-l pol+eng --oem 3 --psm 6',  # Polski + angielski
+            ]
+            
+            best_text = ""
+            best_confidence = 0
+            
+            for config in configs:
+                try:
+                    text = pytesseract.image_to_string(processed_image, config=config)
+                    
+                    # Sprawdź jakość tekstu (heurystyka)
+                    if text.strip():
+                        # Policz procent znaków alfanumerycznych
+                        alphanumeric_ratio = sum(c.isalnum() for c in text) / len(text) if text else 0
+                        # Preferuj tekst z większą ilością polskich znaków
+                        polish_chars = sum(1 for c in text if c in 'ąćęłńóśźżĄĆĘŁŃÓŚŹŻ')
+                        confidence_score = alphanumeric_ratio * 0.7 + (polish_chars / len(text)) * 0.3
+                        
+                        if confidence_score > best_confidence:
+                            best_confidence = confidence_score
+                            best_text = text
+                            
+                except Exception:
+                    continue
+            
+            return best_text.strip() if best_text else ""
+            
         except Exception as e:
             logger.error(f"Błąd podczas OCR dla {file_path}: {e}")
             return ""
@@ -86,6 +153,144 @@ class AIDocumentAnalysisService:
         # This will be handled by the caller
         
         return text
+    
+    def generate_document_preview(self, document: Document) -> Optional[str]:
+        """Generuje miniaturę/podgląd dokumentu"""
+        try:
+            file_path_str = str(document.file_path) if hasattr(document.file_path, '__str__') else document.file_path
+            
+            if not os.path.exists(file_path_str):
+                return None
+                
+            # Utwórz folder na miniatury
+            preview_dir = Path("uploads/previews")
+            preview_dir.mkdir(exist_ok=True)
+            
+            preview_filename = f"{document.id}_preview.jpg"
+            preview_path = preview_dir / preview_filename
+            
+            if document.document_type == DocumentType.PDF:
+                # Generuj miniaturę pierwszej strony PDF
+                doc = fitz.open(file_path_str)
+                if len(doc) > 0:
+                    page = doc[0]
+                    pix = page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))  # 50% rozmiaru
+                    pix.save(str(preview_path))
+                    doc.close()
+                    return str(preview_path)
+                doc.close()
+                    
+            elif document.document_type in [DocumentType.PHOTO, DocumentType.IMAGE, DocumentType.SCAN]:
+                # Zmień rozmiar obrazu do miniatury
+                with Image.open(file_path_str) as img:
+                    img.thumbnail((300, 300), Image.Resampling.LANCZOS)
+                    rgb_img = img.convert('RGB')
+                    rgb_img.save(preview_path, "JPEG", quality=85)
+                    return str(preview_path)
+                    
+        except Exception as e:
+            logger.error(f"Błąd podczas generowania podglądu dla dokumentu {document.id}: {e}")
+            
+        return None
+    
+    def classify_legal_document(self, text: str) -> Dict[str, Any]:
+        """Klasyfikuje typ dokumentu prawnego na podstawie treści"""
+        classification = {
+            "document_type": "unknown",
+            "confidence": 0.0,
+            "detected_entities": [],
+            "key_information": {}
+        }
+        
+        try:
+            # Wzorce dla różnych typów dokumentów
+            document_patterns = {
+                "umowa": ["umowa", "strony", "zobowiązuje", "postanowienia", "paragrafy"],
+                "pozew": ["pozew", "pozwany", "powód", "sąd", "roszczenie", "żądam"],
+                "wniosek": ["wniosek", "wnioskodawca", "proszę", "wnoszę"],
+                "postanowienie": ["postanowienie", "sąd", "orzeka", "na podstawie"],
+                "wyrok": ["wyrok", "sąd", "orzeka", "uzasadnienie"],
+                "wezwanie": ["wezwanie", "wezwanie do zapłaty", "termin płatności"],
+                "skarga": ["skarga", "skarżący", "zarzuca", "wnoszę skargę"],
+                "pismo": ["pismo", "do sądu", "sprawa", "odniesienie"],
+                "faktura": ["faktura", "numer faktury", "kwota", "netto", "brutto", "VAT"],
+                "rachunек": ["rachunek", "kwota do zapłaty", "termin płatności"],
+            }
+            
+            text_lower = text.lower()
+            scores = {}
+            
+            for doc_type, keywords in document_patterns.items():
+                score = sum(1 for keyword in keywords if keyword in text_lower)
+                if score > 0:
+                    scores[doc_type] = score / len(keywords)  # Normalizuj wynik
+            
+            if scores:
+                best_type = max(scores.items(), key=lambda x: x[1])
+                classification["document_type"] = best_type[0]
+                classification["confidence"] = min(best_type[1], 1.0)
+            
+            # Ekstrakcja kluczowych informacji
+            classification["key_information"] = self.extract_key_information(text)
+            
+        except Exception as e:
+            logger.error(f"Błąd podczas klasyfikacji dokumentu: {e}")
+        
+        return classification
+    
+    def extract_key_information(self, text: str) -> Dict[str, List[str]]:
+        """Ekstraktuje kluczowe informacje z tekstu dokumentu (NER)"""
+        entities = {
+            "dates": [],
+            "amounts": [],
+            "persons": [],
+            "case_numbers": [],
+            "court_names": [],
+            "addresses": []
+        }
+        
+        try:
+            # Wzorce regex dla różnych typów informacji
+            patterns = {
+                "dates": [
+                    r'\d{1,2}[\.\-/]\d{1,2}[\.\-/]\d{4}',  # DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY
+                    r'\d{4}[\.\-/]\d{1,2}[\.\-/]\d{1,2}',  # YYYY.MM.DD
+                    r'\d{1,2}\s+(stycznia|lutego|marca|kwietnia|maja|czerwca|lipca|sierpnia|września|października|listopada|grudnia)\s+\d{4}'
+                ],
+                "amounts": [
+                    r'\d+[,\.]\d{2}\s*zł',  # Kwoty w złotych
+                    r'\d+\s*zł',
+                    r'PLN\s*\d+[,\.]\d{2}',
+                    r'\d+[,\.]\d{2}\s*PLN'
+                ],
+                "case_numbers": [
+                    r'[IVX]+\s*[A-Z]+\s*\d+/\d+',  # Sygnatury akt
+                    r'sygn\.\s*akt\s*[:\s]*[IVX]+\s*[A-Z]+\s*\d+/\d+',
+                    r'sprawa\s*nr\s*[IVX]+\s*[A-Z]+\s*\d+/\d+'
+                ],
+                "court_names": [
+                    r'Sąd\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż\s]+',
+                    r'Sąd\s+Okręgowy\s+w\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+',
+                    r'Sąd\s+Rejonowy\s+[a-ząćęłńóśźż\s\-]+',
+                ],
+                "persons": [
+                    r'[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+)?'  # Imię Nazwisko
+                ]
+            }
+            
+            for entity_type, pattern_list in patterns.items():
+                for pattern in pattern_list:
+                    matches = re.findall(pattern, text, re.IGNORECASE)
+                    entities[entity_type].extend(matches)
+            
+            # Usuń duplikaty i posortuj
+            for entity_type in entities:
+                entities[entity_type] = list(set(entities[entity_type]))
+                
+        except Exception as e:
+            logger.error(f"Błąd podczas ekstrakcji informacji: {e}")
+        
+        return entities
     
     def generate_legal_analysis(self, case: Case, documents_text: str, client_context: Optional[str] = None) -> Dict[str, Any]:
         """Generuje analizę prawną za pomocą AI"""
