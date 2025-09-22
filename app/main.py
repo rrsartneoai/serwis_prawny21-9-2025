@@ -21,11 +21,16 @@ app = FastAPI(
 
 from fastapi.middleware.cors import CORSMiddleware
 
+import os
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for Replit environment
+    allow_origins=[
+        "http://localhost:5000",
+        f"https://{os.getenv('REPLIT_DEV_DOMAIN', 'localhost')}"
+    ],  # Secure origins for Replit environment
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 

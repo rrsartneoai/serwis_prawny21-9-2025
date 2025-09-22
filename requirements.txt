@@ -1,5 +1,5 @@
 fastapi==0.111.0
-uvicorn==0.29.0
+uvicorn[standard]==0.29.0
 pydantic==2.7.1
 SQLAlchemy==2.0.30
 python-dotenv==1.0.1
@@ -20,3 +20,15 @@ opencv-python
 pillow
 pymupdf
 pytesseract
+# Additional dependencies for local development
+alembic==1.13.1
+email-validator==2.1.0
+python-multipart==0.0.9
+jinja2==3.1.3
+aiofiles==23.2.1
+# Docker and production dependencies
+gunicorn==21.2.0
+redis==5.0.1
+celery==5.3.4
+python-dateutil==2.8.2
+requests==2.31.0

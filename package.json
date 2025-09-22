@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@ai-sdk/google": "^2.0.14",
+    "@fontsource/montserrat": "^5.2.8",
     "@google-ai/generativelanguage": "^3.4.0",
     "@stripe/react-stripe-js": "^4.0.2",
     "@stripe/stripe-js": "^7.9.0",
