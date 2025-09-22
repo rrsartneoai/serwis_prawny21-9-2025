@@ -42,29 +42,22 @@ export class AuthAPIClient {
   private token: string | null = null;
 
   constructor() {
-    // Use environment-based backend URL configuration
+    // Use Next.js API proxy for Replit environment
     if (typeof window !== 'undefined') {
-      // Browser environment - use environment variable or fallback
+      // Browser environment - use relative URLs to leverage Next.js proxy
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
       if (backendUrl) {
         this.baseUrl = backendUrl;
       } else {
-        // Use the Replit domain with backend port
-        const domain = window.location.hostname;
-        if (domain.includes('replit.dev')) {
-          // Use the same domain but with port 8000 for backend
-          this.baseUrl = `${window.location.protocol}//${domain}:8000`;
-        } else {
-          // Local development fallback
-          this.baseUrl = 'http://localhost:8000';
-        }
+        // Use relative URLs for Next.js API proxy (configured in next.config.mjs)
+        this.baseUrl = '';
       }
       
       // Load existing token from localStorage
       this.loadTokenFromStorage();
     } else {
-      // Server-side rendering - use localhost
-      this.baseUrl = 'http://localhost:8000';
+      // Server-side rendering - use localhost for Next.js proxy
+      this.baseUrl = '';
     }
   }
   
