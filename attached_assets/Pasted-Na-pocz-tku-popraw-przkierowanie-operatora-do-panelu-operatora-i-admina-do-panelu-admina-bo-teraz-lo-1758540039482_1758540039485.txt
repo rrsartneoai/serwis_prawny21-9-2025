@@ -1,0 +1,55 @@
+Na początku popraw przkierowanie operatora do panelu operatora i admina do panelu admina bo teraz logują się jako zwykly klient
+
+następnie : Generowanie podglądów/miniatur.
+AI Analysis Service:
+OCR (Optical Character Recognition) dla przesłanych dokumentów.
+Ekstrakcja kluczowych informacji prawnych z tekstu (NER, klasyfikacja tekstu).
+Analiza zgodności/niezgodności z kontekstem użytkownika.
+Sugestie pism prawnych na podstawie analizy.
+Document Generation Service:
+Generowanie spersonalizowanych pism prawnych na podstawie szablonów i danych z analizy.
+Wsparcie dla różnych typów pism (skargi, pozwy, wezwania, uchylenia itp.).
+Eksport do PDF.
+
+
+Popraw proces pisma :Proces Zamawiania Analizy/Pisma:
+Krok 1: Wgranie pisma do analizy.
+Drag-and-drop obszar, przycisk do wyboru pliku.
+Możliwość robienia zdjęć (telefonem).
+Obsługa PDF, JPG, PNG.
+Walidacja rozmiaru/ilości plików.
+Krok 2: Opis czego oczekuje użytkownik.
+Pole tekstowe na kontekst (zgadza się/nie zgadza, dlaczego).
+Podpowiedzi, aby wydobyć jak najwięcej informacji.
+Możliwość nagrania opisu głosowego (do 2 minut, transkrypcja w tle).
+Krok 3: Wybór opcji analizy i płatność.
+Prezentacja pakietów: Standard, Priorytetowa, Premium (z różnymi cenami, czasami realizacji, zakresem).
+Opcje płatności (karta, BLIK, przelew, Google Pay, Apple Pay).
+Formularz danych do faktury (konsument/przedsiębiorca).
+Zaznaczenie zgód (OWU, RODO).
+
+
+rzeczywista implemntacja po stronie backendu i frontendu w panelach wszystkich : operatora admina i kienta
+
+Konto Użytkownika ("Moje Sprawy"):
+Historia Spraw:
+Lista spraw z możliwością nadawania własnych nazw.
+Status sprawy (w toku, gotowa, zakończona).
+Podgląd wgranych pism.
+Podgląd analizy (możliwość udostępniania częściowo z opcją płatności za pełny dostęp).
+Kafelki z sugerowanymi pismami do kupienia po analizie (z cenami, malejącymi przy kolejnych zakupach).
+Możliwość dodania odpowiedzi od sądu/komornika do istniejącej sprawy.
+Przycisk "Dodaj Nową Sprawę" do wgrania kolejnego pisma.
+Analiza Pisma / Pismo:
+Wyświetlanie treści analizy i pism.
+Przestrzeń na komentarze użytkownika.
+Opcja pobierania zakupionych pism.
+
+
+ulepsz proces procesowania pisma, komunikacji pomiedzy panelami oraz mozliwosc wysylania wiadomosci pomiedzy operator <--> admin oraz operator <--> klient oraz nadzor admina nad wszystkim co się dzieje w panelach i edycji
+
+popraw responsywnosc ikonek aby teksty nie wychodzily poza guziki oraz , 
+
+on the Account page, refine the display of case details. When a case is selected, show a download link for the user's original uploaded file, implement ability to view the every document in the system and add a section to display purchased documents after payment.
+
+wprowadz ulepszenia, zabezpieczenia oraz zasostuj podany motyw w panelach admina operatora i klienta uzyj bilioteki do UI : npx shadcn@latest add https://tweakcn.com/r/themes/cmfuvb4ca000h04l70gxu30tl
