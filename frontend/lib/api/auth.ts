@@ -118,7 +118,7 @@ export class AuthAPIClient {
   // Email/Password Authentication
   async register(email: string, password: string, firstName?: string, lastName?: string): Promise<ApiResponse<AuthResponse>> {
     try {
-      const tokenResponse = await this.makeRequest<any>('POST', '/users/register/', {
+      const tokenResponse = await this.makeRequest<any>('POST', '/users/register', {
         email,
         password
       });
@@ -289,7 +289,7 @@ export class AuthAPIClient {
     }
 
     try {
-      const user = await this.makeRequest<User>('GET', '/users/me/', null, true);
+      const user = await this.makeRequest<User>('GET', '/users/me', null, true);
       return { data: user, error: null };
     } catch (error) {
       return { 

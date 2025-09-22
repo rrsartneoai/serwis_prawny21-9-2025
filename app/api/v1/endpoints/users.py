@@ -12,7 +12,7 @@ from app.core.auth import authenticate_user, get_current_active_user
 
 router = APIRouter()
 
-@router.post("/register/", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
@@ -45,6 +45,6 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/me/", response_model=UserInDB)
+@router.get("/me", response_model=UserInDB)
 def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
