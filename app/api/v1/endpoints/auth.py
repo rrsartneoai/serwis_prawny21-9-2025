@@ -62,6 +62,15 @@ async def get_verified_user(
     
     return user
 
+async def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency to ensure user is an admin."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+    return current_user
+
 @router.post("/register", response_model=AuthResponse)
 async def register_user(
     user_data: UserRegistration,

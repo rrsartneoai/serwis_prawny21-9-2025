@@ -24,6 +24,7 @@ import {
   UserPlus,
   Building2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface DashboardStats {
   users: {
@@ -76,6 +77,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     fetchDashboardData();
@@ -111,6 +113,17 @@ export default function AdminDashboard() {
     }
   };
 
+  const exportStats = () => {
+    if (!stats) return;
+    const blob = new Blob([JSON.stringify(stats, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dashboard-stats-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -140,6 +153,9 @@ export default function AdminDashboard() {
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">Przegląd systemu Kancelaria X</p>
+        <div className="mt-2">
+          <Button variant="outline" size="sm" onClick={exportStats} disabled={!stats}>Eksportuj statystyki</Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -395,6 +411,7 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 className="w-full justify-start bg-transparent"
+                onClick={() => router.push("/admin/uzytkownicy")}
               >
                 <Users className="h-4 w-4 mr-2" />
                 Zarządzaj użytkownikami
@@ -402,6 +419,7 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 className="w-full justify-start bg-transparent"
+                onClick={() => router.push("/admin/kancelarie")}
               >
                 <Building className="h-4 w-4 mr-2" />
                 Przeglądaj kancelarie
@@ -409,6 +427,7 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 className="w-full justify-start bg-transparent"
+                onClick={() => router.push("/admin/analityka")}
               >
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Zobacz analitykę

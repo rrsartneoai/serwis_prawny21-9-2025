@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 from datetime import datetime
+from sqlalchemy import Column, Integer, ForeignKey
 
 class DocumentBase(BaseModel):
     filename: str
@@ -62,3 +63,5 @@ class CaseInDB(CaseBase):
 
     class Config:
         from_attributes = True
+
+user_id = Column(Integer, ForeignKey("users.id"))

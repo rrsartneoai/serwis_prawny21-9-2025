@@ -1,7 +1,5 @@
 "use client";
 
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -191,8 +189,6 @@ export default function KonsultacjePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-montserrat">
-      <Header />
-
       <main className="flex-1">
         {/* Hero Section */}
         <section className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white py-20">
@@ -451,7 +447,7 @@ export default function KonsultacjePage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-600 italic">
-                      "{testimonial.content}"
+                      &quot;{testimonial.content}&quot;
                     </p>
                   </CardContent>
                 </Card>
@@ -493,8 +489,6 @@ export default function KonsultacjePage() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </div>
   );
 }

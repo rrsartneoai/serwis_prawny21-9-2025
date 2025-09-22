@@ -125,6 +125,15 @@ export default function OperatorSettingsPage() {
 
   useEffect(() => {
     fetchSettings();
+    // Load from localStorage if available
+    try {
+      const raw = localStorage.getItem("operator-settings");
+      if (raw) {
+        const parsed = JSON.parse(raw) as OperatorSettings;
+        setSettings(parsed);
+        setLoading(false);
+      }
+    } catch {}
   }, []);
 
   const fetchSettings = async () => {
@@ -181,6 +190,11 @@ export default function OperatorSettingsPage() {
       
       // TODO: Replace with actual API call
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      
+      // Persist to localStorage for now
+      try {
+        localStorage.setItem("operator-settings", JSON.stringify(settings));
+      } catch {}
       
       toast.success("Ustawienia zostały zapisane");
     } catch (error) {

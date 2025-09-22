@@ -10,24 +10,11 @@ from app.models.case import Case
 from app.models.payment import Payment
 from app.models.notification import Notification
 from app.models.kancelaria import Kancelaria
-from app.api.v1.endpoints.auth import get_current_user, get_verified_user
-from pydantic import BaseModel
+from app.api.v1.endpoints.auth import require_admin
+from pydantic import BaseModel, EmailStr
+from app.services.auth_service import AuthService
 
 router = APIRouter()
-
-# Admin permission check - doesn't require email verification
-async def require_admin(current_user: User = Depends(get_current_user)):
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Account is deactivated"
-        )
-    return current_user
 
 # Response schemas
 class DashboardStats(BaseModel):
@@ -56,6 +43,19 @@ class UserManagement(BaseModel):
 
 class UserRoleUpdate(BaseModel):
     role: UserRole
+
+class CreateUserRequest(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    role: UserRole = UserRole.CLIENT
+
+class UserLookupResponse(BaseModel):
+    id: int
+    email: Optional[str]
+    first_name: Optional[str]
+    last_name: Optional[str]
 
 @router.get("/dashboard/stats", response_model=DashboardStats)
 async def get_dashboard_stats(
@@ -92,24 +92,32 @@ async def get_dashboard_stats(
     month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     new_users_this_month = db.query(User).filter(User.created_at >= month_start).count()
 
-    # Law firms statistics
-    total_law_firms = db.query(Kancelaria).count()
-    active_law_firms = db.query(Kancelaria).filter(Kancelaria.is_active == True).count()
-    verified_law_firms = db.query(Kancelaria).filter(Kancelaria.is_verified == True).count()
-    new_law_firms_this_month = db.query(Kancelaria).filter(Kancelaria.created_at >= month_start).count()
+    # Law firms statistics (defensive if table missing)
+    try:
+        total_law_firms = db.query(Kancelaria).count()
+        active_law_firms = db.query(Kancelaria).filter(Kancelaria.is_active == True).count()
+        verified_law_firms = db.query(Kancelaria).filter(Kancelaria.is_verified == True).count()
+        new_law_firms_this_month = db.query(Kancelaria).filter(Kancelaria.created_at >= month_start).count()
+    except Exception:
+        total_law_firms = active_law_firms = verified_law_firms = new_law_firms_this_month = 0
 
-    # Payment/subscription statistics
-    total_payments = db.query(Payment).count()
-    active_subscriptions = db.query(Payment).filter(Payment.status == "PAID").count()
-    
-    # Calculate revenue (simplified)
-    revenue_query = db.query(func.sum(Payment.amount)).filter(Payment.status == "PAID").scalar()
-    total_revenue = float(revenue_query) if revenue_query else 0.0
+    # Payment/subscription statistics (defensive)
+    try:
+        total_payments = db.query(Payment).count()
+        active_subscriptions = db.query(Payment).filter(Payment.status == "PAID").count()
+        revenue_query = db.query(func.sum(Payment.amount)).filter(Payment.status == "PAID").scalar()
+        total_revenue = float(revenue_query) if revenue_query else 0.0
+    except Exception:
+        total_payments = active_subscriptions = 0
+        total_revenue = 0.0
 
     # API usage (simplified - using case creation as proxy)
     today = datetime.now().date()
-    today_cases = db.query(Case).filter(func.date(Case.created_at) == today).count()
-    total_cases = db.query(Case).count()
+    try:
+        today_cases = db.query(Case).filter(func.date(Case.created_at) == today).count()
+        total_cases = db.query(Case).count()
+    except Exception:
+        today_cases = total_cases = 0
 
     return DashboardStats(
         users={
@@ -213,6 +221,56 @@ async def get_all_users(
         )
         for user in users
     ]
+
+@router.get("/users/search", response_model=Optional[UserLookupResponse])
+async def search_user(
+    email: EmailStr,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Find user by email (admin only). Returns null if not found."""
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return None
+    return UserLookupResponse(id=user.id, email=user.email, first_name=user.first_name, last_name=user.last_name)
+
+@router.post("/users", response_model=UserManagement, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    body: CreateUserRequest,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Create a new user (admin only)."""
+    existing = db.query(User).filter(User.email == body.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+
+    hashed = AuthService.get_password_hash(body.password) if body.password else None
+    user = User(
+        email=body.email,
+        first_name=body.first_name,
+        last_name=body.last_name,
+        hashed_password=hashed,
+        role=body.role,
+        is_active=True,
+        is_verified=True,
+        created_at=datetime.utcnow(),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return UserManagement(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        role=user.role.value if hasattr(user.role, 'value') else str(user.role),
+        is_active=user.is_active,
+        is_verified=user.is_verified,
+        created_at=user.created_at,
+        last_login=user.last_login,
+    )
 
 @router.put("/users/{user_id}/role")
 async def update_user_role(

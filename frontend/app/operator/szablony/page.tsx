@@ -45,9 +45,6 @@ import {
   Copy,
   Eye,
   Tag,
-  Clock,
-  User,
-  MessageSquare,
   Star,
   RefreshCw,
 } from "lucide-react";
@@ -56,14 +53,13 @@ import { toast } from "sonner";
 interface Template {
   id: number;
   name: string;
-  subject: string;
+  subject: string | null;
   content: string;
-  category: "LEGAL_ADVICE" | "DOCUMENTS" | "CONSULTATION" | "GENERAL" | "URGENT";
+  category: "LEGAL_ADVICE" | "DOCUMENTS" | "CONSULTATION" | "GENERAL" | "URGENT" | string;
   is_favorite: boolean;
   usage_count: number;
   created_at: string;
   updated_at: string;
-  variables: string[]; // Template variables like {CLIENT_NAME}, {CASE_TITLE}
 }
 
 const categoryLabels = {
@@ -72,7 +68,7 @@ const categoryLabels = {
   CONSULTATION: "Konsultacja",
   GENERAL: "Ogólne",
   URGENT: "Pilne",
-};
+} as const;
 
 const categoryColors = {
   LEGAL_ADVICE: "bg-blue-100 text-blue-800",
@@ -80,7 +76,7 @@ const categoryColors = {
   CONSULTATION: "bg-purple-100 text-purple-800",
   GENERAL: "bg-gray-100 text-gray-800",
   URGENT: "bg-red-100 text-red-800",
-};
+} as const;
 
 export default function OperatorTemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -106,105 +102,10 @@ export default function OperatorTemplatesPage() {
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      
-      // Mock data since backend not yet implemented
-      const mockTemplates: Template[] = [
-        {
-          id: 1,
-          name: "Powitanie nowego klienta",
-          subject: "Witamy w Kancelarii X - Twoja sprawa #{CASE_ID}",
-          content: `Dzień dobry {CLIENT_NAME},
-
-Dziękujemy za wybór naszej kancelarii. Przyjęliśmy Twoją sprawę "{CASE_TITLE}" do realizacji.
-
-W ciągu 24 godzin otrzymasz szczegółową analizę przesłanych dokumentów oraz plan działania.
-
-Jeśli masz pytania, jestem do Twojej dyspozycji.
-
-Z poważaniem,
-{OPERATOR_NAME}`,
-          category: "GENERAL",
-          is_favorite: true,
-          usage_count: 45,
-          created_at: "2024-01-15T10:30:00Z",
-          updated_at: "2024-01-20T14:15:00Z",
-          variables: ["CLIENT_NAME", "CASE_ID", "CASE_TITLE", "OPERATOR_NAME"],
-        },
-        {
-          id: 2,
-          name: "Prośba o dodatkowe dokumenty",
-          subject: "Sprawa #{CASE_ID} - Potrzebujemy dodatkowych dokumentów",
-          content: `Dzień dobry {CLIENT_NAME},
-
-W związku z analizą Twojej sprawy "{CASE_TITLE}", potrzebujemy następujących dokumentów:
-
-{DOCUMENT_LIST}
-
-Prosimy o przesłanie ich przez system w terminie 7 dni roboczych.
-
-Dziękujemy za współpracę.
-
-Z poważaniem,
-{OPERATOR_NAME}`,
-          category: "DOCUMENTS",
-          is_favorite: false,
-          usage_count: 28,
-          created_at: "2024-01-18T09:20:00Z",
-          updated_at: "2024-01-18T09:20:00Z",
-          variables: ["CLIENT_NAME", "CASE_ID", "CASE_TITLE", "DOCUMENT_LIST", "OPERATOR_NAME"],
-        },
-        {
-          id: 3,
-          name: "Analiza prawna gotowa",
-          subject: "Analiza prawna Twojej sprawy jest gotowa",
-          content: `Dzień dobry {CLIENT_NAME},
-
-Zakończyliśmy analizę prawną Twojej sprawy "{CASE_TITLE}".
-
-Analiza zawiera:
-- Ocenę szans powodzenia sprawy
-- Rekomendowane kroki prawne
-- Oszacowanie kosztów i czasu
-
-Dokument znajdziesz w swoim panelu klienta.
-
-Zapraszamy na konsultację telefoniczną.
-
-Z poważaniem,
-{OPERATOR_NAME}`,
-          category: "LEGAL_ADVICE",
-          is_favorite: true,
-          usage_count: 67,
-          created_at: "2024-01-10T16:45:00Z",
-          updated_at: "2024-01-19T11:30:00Z",
-          variables: ["CLIENT_NAME", "CASE_TITLE", "OPERATOR_NAME"],
-        },
-        {
-          id: 4,
-          name: "Sprawa pilna - szybki kontakt",
-          subject: "PILNE: Sprawa #{CASE_ID} wymaga natychmiastowej uwagi",
-          content: `Dzień dobry {CLIENT_NAME},
-
-Twoja sprawa "{CASE_TITLE}" została oznaczona jako pilna.
-
-Prosimy o natychmiastowy kontakt pod numerem {CONTACT_PHONE} lub email {CONTACT_EMAIL}.
-
-Dostępni jesteśmy do godziny 20:00.
-
-Sprawa wymaga szybkich działań prawnych.
-
-Z poważaniem,
-{OPERATOR_NAME}`,
-          category: "URGENT",
-          is_favorite: false,
-          usage_count: 12,
-          created_at: "2024-01-22T08:00:00Z",
-          updated_at: "2024-01-22T08:00:00Z",
-          variables: ["CLIENT_NAME", "CASE_ID", "CASE_TITLE", "CONTACT_PHONE", "CONTACT_EMAIL", "OPERATOR_NAME"],
-        },
-      ];
-
-      setTemplates(mockTemplates);
+      const res = await fetch("/api/v1/templates", { headers: { "Content-Type": "application/json" } });
+      if (!res.ok) throw new Error("Failed to load templates");
+      const data: Template[] = await res.json();
+      if (!data.length) seedDefaults(); else setTemplates(data);
     } catch (error) {
       console.error("Error fetching templates:", error);
       toast.error("Błąd podczas pobierania szablonów");
@@ -213,114 +114,91 @@ Z poważaniem,
     }
   };
 
+  const seedDefaults = async () => {
+    const defaults = [
+      { name: "Powitanie nowego klienta", subject: "Witamy w Kancelarii X - Twoja sprawa", content: "Dzień dobry {CLIENT_NAME},\n\nDziękujemy za wybór naszej kancelarii...", category: "GENERAL" },
+      { name: "Prośba o dodatkowe dokumenty", subject: "Sprawa - dokumenty", content: "Dzień dobry {CLIENT_NAME},\n\nProsimy o przesłanie: {DOCUMENT_LIST}", category: "DOCUMENTS" },
+      { name: "Analiza prawna gotowa", subject: "Analiza sprawy gotowa", content: "Analiza sprawy \"{CASE_TITLE}\" jest dostępna w panelu.", category: "LEGAL_ADVICE" },
+      { name: "Sprawa pilna - szybki kontakt", subject: "PILNE: kontakt", content: "Twoja sprawa została oznaczona jako pilna. Prosimy o natychmiastowy kontakt.", category: "URGENT" },
+    ];
+    try {
+      await Promise.all(defaults.map(t => fetch("/api/v1/templates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...t, is_favorite: false }) })));
+      await fetchTemplates();
+    } catch {}
+  };
+
   const handleCreateTemplate = async () => {
     try {
-      const newTemplate: Template = {
-        id: Date.now(),
-        ...formData,
-        is_favorite: false,
-        usage_count: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        variables: extractVariables(formData.content),
-      };
-
-      setTemplates([...templates, newTemplate]);
+      const res = await fetch("/api/v1/templates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...formData }) });
+      if (!res.ok) throw new Error("Create failed");
+      const created = await res.json();
+      setTemplates(prev => [created, ...prev]);
       toast.success("Szablon został utworzony");
       resetForm();
       setShowCreateModal(false);
-    } catch (error) {
-      console.error("Error creating template:", error);
+    } catch (e) {
       toast.error("Błąd podczas tworzenia szablonu");
     }
   };
 
   const handleUpdateTemplate = async () => {
     if (!selectedTemplate) return;
-
     try {
-      const updatedTemplate = {
-        ...selectedTemplate,
-        ...formData,
-        updated_at: new Date().toISOString(),
-        variables: extractVariables(formData.content),
-      };
-
-      setTemplates(templates.map(t => t.id === selectedTemplate.id ? updatedTemplate : t));
+      const res = await fetch(`/api/v1/templates/${selectedTemplate.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...formData }) });
+      if (!res.ok) throw new Error("Update failed");
+      const updated = await res.json();
+      setTemplates(prev => prev.map(t => t.id === updated.id ? updated : t));
       toast.success("Szablon został zaktualizowany");
       resetForm();
       setShowEditModal(false);
       setSelectedTemplate(null);
-    } catch (error) {
-      console.error("Error updating template:", error);
+    } catch (e) {
       toast.error("Błąd podczas aktualizacji szablonu");
     }
   };
 
   const handleDeleteTemplate = async (templateId: number) => {
     try {
-      setTemplates(templates.filter(t => t.id !== templateId));
+      const res = await fetch(`/api/v1/templates/${templateId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      setTemplates(prev => prev.filter(t => t.id !== templateId));
       toast.success("Szablon został usunięty");
-    } catch (error) {
-      console.error("Error deleting template:", error);
+    } catch {
       toast.error("Błąd podczas usuwania szablonu");
     }
   };
 
   const handleToggleFavorite = async (templateId: number) => {
-    try {
-      setTemplates(templates.map(t => 
-        t.id === templateId ? { ...t, is_favorite: !t.is_favorite } : t
-      ));
-    } catch (error) {
-      console.error("Error toggling favorite:", error);
-      toast.error("Błąd podczas zmiany ulubionych");
-    }
+    setTemplates(prev => prev.map(t => t.id === templateId ? { ...t, is_favorite: !t.is_favorite } : t));
   };
 
   const handleCopyTemplate = async (template: Template) => {
     try {
       await navigator.clipboard.writeText(template.content);
       toast.success("Zawartość szablonu została skopiowana");
+      await fetch(`/api/v1/templates/${template.id}/use`, { method: "POST" });
     } catch (error) {
       console.error("Error copying template:", error);
       toast.error("Błąd podczas kopiowania");
     }
   };
 
-  const extractVariables = (content: string): string[] => {
-    const matches = content.match(/{[A-Z_]+}/g);
-    return matches ? matches.map(match => match.slice(1, -1)) : [];
-  };
-
   const resetForm = () => {
-    setFormData({
-      name: "",
-      subject: "",
-      content: "",
-      category: "GENERAL",
-    });
+    setFormData({ name: "", subject: "", content: "", category: "GENERAL" });
   };
 
   const openEditModal = (template: Template) => {
     setSelectedTemplate(template);
-    setFormData({
-      name: template.name,
-      subject: template.subject,
-      content: template.content,
-      category: template.category,
-    });
+    setFormData({ name: template.name, subject: template.subject || "", content: template.content, category: template.category });
     setShowEditModal(true);
   };
 
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch =
       template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (template.subject || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       template.content.toLowerCase().includes(searchQuery.toLowerCase());
-    
     const matchesCategory = categoryFilter === "all" || template.category === categoryFilter;
-
     return matchesSearch && matchesCategory;
   });
 
@@ -380,12 +258,11 @@ Z poważaniem,
                 <p className="text-2xl font-bold">{templates.length}</p>
               </div>
               <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <MessageSquare className="h-4 w-4 text-blue-600" />
+                <Tag className="h-4 w-4 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -403,38 +280,19 @@ Z poważaniem,
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  Najczęściej używane
+                  Łączne użycia (sesja)
                 </p>
                 <p className="text-2xl font-bold">
-                  {templates.reduce((max, t) => Math.max(max, t.usage_count), 0)}
+                  {templates.reduce((sum, t) => sum + (t.usage_count || 0), 0)}
                 </p>
               </div>
               <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
                 <Copy className="h-4 w-4 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Kategorie
-                </p>
-                <p className="text-2xl font-bold">
-                  {new Set(templates.map(t => t.category)).size}
-                </p>
-              </div>
-              <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <Tag className="h-4 w-4 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -509,8 +367,8 @@ Z poważaniem,
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={categoryColors[template.category]}>
-                      {categoryLabels[template.category]}
+                    <Badge className={categoryColors[(template.category as keyof typeof categoryColors) || 'GENERAL'] || categoryColors.GENERAL}>
+                      {categoryLabels[(template.category as keyof typeof categoryLabels) || 'GENERAL'] || template.category}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -521,7 +379,6 @@ Z poważaniem,
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4 mr-1" />
                       {new Date(template.updated_at).toLocaleDateString("pl-PL")}
                     </div>
                   </TableCell>
@@ -530,10 +387,7 @@ Z poważaniem,
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          setSelectedTemplate(template);
-                          setShowPreviewModal(true);
-                        }}
+                        onClick={() => { setSelectedTemplate(template); setShowPreviewModal(true); }}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -633,9 +487,6 @@ Z poważaniem,
                 rows={8}
                 placeholder="Użyj zmiennych jak {CLIENT_NAME}, {CASE_TITLE}, {OPERATOR_NAME}"
               />
-              <div className="text-xs text-muted-foreground mt-1">
-                Dostępne zmienne: {CLIENT_NAME}, {CASE_ID}, {CASE_TITLE}, {OPERATOR_NAME}, {CONTACT_PHONE}, {CONTACT_EMAIL}
-              </div>
             </div>
           </div>
           <DialogFooter>
@@ -733,16 +584,6 @@ Z poważaniem,
                 <Label>Treść</Label>
                 <div className="p-3 bg-gray-50 rounded-lg whitespace-pre-wrap">
                   {selectedTemplate.content}
-                </div>
-              </div>
-              <div>
-                <Label>Zmienne</Label>
-                <div className="flex flex-wrap gap-2">
-                  {selectedTemplate.variables.map((variable) => (
-                    <Badge key={variable} variant="outline">
-                      {`{${variable}}`}
-                    </Badge>
-                  ))}
                 </div>
               </div>
             </div>

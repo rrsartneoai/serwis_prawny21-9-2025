@@ -15,10 +15,13 @@ const nextConfig = {
   // Configure for Replit environment - Next.js automatically allows all hosts in development
   // Proxy API calls to local backend server
   async rewrites() {
+    // Allow overriding backend via env; fall back to IPv4 localhost for non-Docker/dev to avoid ::1 issues
+    const rawBackendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || 'http://127.0.0.1:8000'
+    const backendUrl = rawBackendUrl.replace(/\/$/, '')
     return [
       {
         source: '/api/v1/:path*',
-        destination: 'http://127.0.0.1:8000/api/v1/:path*'
+        destination: `${backendUrl}/api/v1/:path*`
       }
     ]
   },

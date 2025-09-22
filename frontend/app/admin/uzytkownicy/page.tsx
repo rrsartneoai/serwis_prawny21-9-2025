@@ -76,6 +76,15 @@ interface User {
   is_verified: boolean;
   created_at: string;
   last_login?: string;
+  updated_at?: string;
+  law_firm?: {
+    name: string;
+  };
+  stats?: {
+    api_calls: number;
+    searches: number;
+    documents_analyzed: number;
+  };
 }
 
 interface UserFormData {
@@ -205,22 +214,25 @@ export default function UsersManagementPage() {
         'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
       };
       
-      const response = await fetch(`/api/v1/admin/users/${selectedUser.id}/role`, {
+      // UWAGA: Ten endpoint (`/role`) prawdopodobnie aktualizuje tylko rolę użytkownika.
+      // Formularz w UI pozwala na edycję większej liczby pól, ale nie są one wysyłane do API.
+      // Należy zaimplementować backendowy endpoint do pełnej aktualizacji użytkownika lub dostosować ten formularz.
+      const response = await fetch(`/api/v1/admin/users/${selectedUser.id}/role`, { // Note: This endpoint only updates the role.
         method: "PUT",
         headers: authHeaders,
         body: JSON.stringify({ role: formData.role }),
       });
 
-      if (!response.ok) throw new Error("Failed to update user");
+      if (!response.ok) throw new Error("Failed to update user role");
 
-      toast.success("Użytkownik został zaktualizowany");
+      toast.success("Rola użytkownika została zaktualizowana");
       setIsEditModalOpen(false);
       setSelectedUser(null);
       resetForm();
       fetchUsers();
     } catch (error) {
       console.error("Error updating user:", error);
-      toast.error("Błąd podczas aktualizacji użytkownika");
+      toast.error("Błąd podczas aktualizacji roli użytkownika");
     }
   };
 
@@ -306,27 +318,9 @@ export default function UsersManagementPage() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Zarządzanie użytkownikami</h1>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // The initial loading state is handled by `loading.tsx` via Suspense.
+  // The `if (loading)` block was removed to avoid showing a different, simpler skeleton
+  // and to rely on the more detailed one in `loading.tsx` for a consistent UX.
 
   return (
     <div className="space-y-6">
@@ -699,16 +693,30 @@ export default function UsersManagementPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
+                disabled // Email change has security implications and is not supported by the current endpoint.
+                // To pole powinno być prawdopodobnie tylko do odczytu, zmiana emaila ma duże implikacje.
               />
             </div>
             <div>
-              <Label htmlFor="edit_full_name">Imię i nazwisko</Label>
+              <Label htmlFor="edit_first_name">Imię</Label>
               <Input
-                id="edit_full_name"
-                value={formData.full_name}
+                id="edit_first_name"
+                value={formData.first_name}
                 onChange={(e) =>
-                  setFormData({ ...formData, full_name: e.target.value })
+                  setFormData({ ...formData, first_name: e.target.value })
                 }
+                disabled // The current endpoint only supports updating the role.
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_last_name">Nazwisko</Label>
+              <Input
+                id="edit_last_name"
+                value={formData.last_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, last_name: e.target.value })
+                }
+                disabled // The current endpoint only supports updating the role.
               />
             </div>
             <div>
@@ -719,24 +727,23 @@ export default function UsersManagementPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
+                disabled // The current endpoint only supports updating the role.
               />
             </div>
             <div>
               <Label htmlFor="edit_role">Rola</Label>
               <Select
                 value={formData.role}
-                onValueChange={(value: unknown) =>
-                  setFormData({ ...formData, role: value as "client" | "lawyer" | "admin" | "operator" })
-                }
+                onValueChange={(value: "CLIENT" | "OPERATOR" | "ADMIN") =>
+                  setFormData({ ...formData, role: value }) }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="client">Klient</SelectItem>
-                  <SelectItem value="lawyer">Prawnik</SelectItem>
-                  <SelectItem value="operator">Operator</SelectItem>
-                  <SelectItem value="admin">Administrator</SelectItem>
+                  <SelectItem value="CLIENT">Klient</SelectItem>
+                  <SelectItem value="OPERATOR">Operator</SelectItem>
+                  <SelectItem value="ADMIN">Administrator</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -747,6 +754,7 @@ export default function UsersManagementPage() {
                 onCheckedChange={(checked) =>
                   setFormData({ ...formData, is_active: checked })
                 }
+                disabled // Status is toggled via a separate button and endpoint.
               />
               <Label htmlFor="edit_is_active">Aktywne konto</Label>
             </div>
@@ -785,7 +793,8 @@ export default function UsersManagementPage() {
                   <div>
                     <Label>Imię i nazwisko</Label>
                     <p className="text-sm font-medium">
-                      {selectedUser.full_name || "Brak"}
+                      {`${selectedUser.first_name || ""} ${selectedUser.last_name || ""}`.trim() ||
+                        "Brak"}
                     </p>
                   </div>
                   <div>
@@ -819,9 +828,11 @@ export default function UsersManagementPage() {
                   <div>
                     <Label>Ostatnia aktualizacja</Label>
                     <p className="text-sm font-medium">
-                      {new Date(selectedUser.updated_at).toLocaleString(
-                        "pl-PL",
-                      )}
+                      {selectedUser.updated_at
+                        ? new Date(selectedUser.updated_at).toLocaleString(
+                            "pl-PL",
+                          )
+                        : "Brak danych"}
                     </p>
                   </div>
                   <div>

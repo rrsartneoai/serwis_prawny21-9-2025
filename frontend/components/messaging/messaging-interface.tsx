@@ -50,6 +50,28 @@ export function MessagingInterface({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const quickTemplates = [
+    {
+      title: "Niewyraźne dokumenty",
+      content:
+        "Szanowny Kliencie, otrzymane dokumenty są nieczytelne. Proszę o przesłanie skanów w lepszej jakości lub zdjęć z lepszym oświetleniem.",
+    },
+    {
+      title: "Potrzebne dodatkowe informacje",
+      content:
+        "W celu przeprowadzenia pełnej analizy potrzebujemy dodatkowych informacji. Proszę o kontakt telefoniczny lub uzupełnienie danych.",
+    },
+    {
+      title: "Analiza gotowa",
+      content:
+        "Analiza Państwa sprawy została zakończona i jest dostępna w panelu klienta. Zapraszamy do zapoznania się z wynikami.",
+    },
+    {
+      title: "Dokumenty gotowe",
+      content:
+        "Przygotowane pisma prawne są dostępne w Państwa panelu. Załączono instrukcje dotyczące dalszego postępowania.",
+    },
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -174,6 +196,35 @@ export function MessagingInterface({
       </CardHeader>
       
       <CardContent className="flex-1 flex flex-col p-0">
+        {/* Quick templates */}
+        {recipientId && (
+          <div className="border-b p-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+            {quickTemplates.map((t) => (
+              <div key={t.title} className="flex items-center justify-between gap-2 rounded-md bg-gray-50 p-2">
+                <div>
+                  <div className="text-sm font-medium">{t.title}</div>
+                  <div className="text-xs text-gray-600 line-clamp-2">{t.content}</div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setInput(t.content)}>
+                    Wstaw
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      const prev = input;
+                      setInput(t.content);
+                      await sendMessage();
+                      setInput(prev);
+                    }}
+                  >
+                    Wyślij
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-96">
           {isLoadingMessages ? (

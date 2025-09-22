@@ -29,16 +29,11 @@ import {
 import { Progress } from "@/components/ui/progress";
 import {
   BarChart3,
-  TrendingUp,
-  TrendingDown,
   Users,
   Activity,
   DollarSign,
-  FileText,
-  Clock,
-  Download,
   RefreshCw,
-  Calendar,
+  Download,
 } from "lucide-react";
 
 interface AnalyticsData {
@@ -70,31 +65,7 @@ interface AnalyticsData {
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState("30d");
-  const [analytics, setAnalytics] = useState<AnalyticsData>({
-    overview: {
-      total_users: 0,
-      active_users: 0,
-      total_revenue: 0,
-      total_cases: 0,
-      api_calls_today: 0,
-      growth_rate: 0,
-    },
-    user_analytics: {
-      new_registrations: [],
-      user_activity: [],
-      retention_rate: 0,
-    },
-    financial_analytics: {
-      revenue_by_month: [],
-      subscription_distribution: [],
-      churn_rate: 0,
-    },
-    system_analytics: {
-      api_usage: [],
-      error_rate: 0,
-      uptime: 0,
-    },
-  });
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 
   useEffect(() => {
     fetchAnalytics();
@@ -103,67 +74,79 @@ export default function AnalyticsPage() {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      
-      // Mock analytics data since backend not yet implemented
-      const mockAnalytics: AnalyticsData = {
+      const res = await fetch("/api/admin/dashboard/stats");
+      const stats = await res.json();
+
+      const mapped: AnalyticsData = {
         overview: {
-          total_users: 125,
-          active_users: 89,
-          total_revenue: 12450,
-          total_cases: 234,
-          api_calls_today: 1456,
-          growth_rate: 15.2,
+          total_users: stats.users?.total ?? 0,
+          active_users: stats.users?.active ?? 0,
+          total_revenue: stats.subscriptions?.revenue ?? 0,
+          total_cases: stats.apiUsage?.totalCalls ?? 0,
+          api_calls_today: stats.apiUsage?.todayCalls ?? 0,
+          growth_rate: 0,
         },
         user_analytics: {
-          new_registrations: [
-            { date: "2024-01-01", count: 12 },
-            { date: "2024-01-02", count: 18 },
-            { date: "2024-01-03", count: 15 },
-            { date: "2024-01-04", count: 22 },
-            { date: "2024-01-05", count: 19 },
-          ],
-          user_activity: [
-            { date: "2024-01-01", active_users: 65 },
-            { date: "2024-01-02", active_users: 72 },
-            { date: "2024-01-03", active_users: 89 },
-            { date: "2024-01-04", active_users: 94 },
-            { date: "2024-01-05", active_users: 89 },
-          ],
-          retention_rate: 85.5,
+          new_registrations: [],
+          user_activity: [],
+          retention_rate: 0,
         },
         financial_analytics: {
-          revenue_by_month: [
-            { month: "Grudzień", revenue: 8500 },
-            { month: "Styczeń", revenue: 12450 },
-          ],
+          revenue_by_month: [],
           subscription_distribution: [
-            { plan: "Basic", count: 45, percentage: 36 },
-            { plan: "Pro", count: 68, percentage: 54 },
-            { plan: "Enterprise", count: 12, percentage: 10 },
+            { plan: "Aktywne", count: stats.subscriptions?.active ?? 0, percentage: 0 },
+            { plan: "Trial", count: stats.subscriptions?.trial ?? 0, percentage: 0 },
           ],
-          churn_rate: 4.2,
+          churn_rate: 0,
         },
         system_analytics: {
           api_usage: [
-            { endpoint: "/api/v1/cases", calls: 2340, avg_response_time: 145 },
-            { endpoint: "/api/v1/documents", calls: 1890, avg_response_time: 230 },
-            { endpoint: "/api/v1/auth", calls: 567, avg_response_time: 89 },
-            { endpoint: "/api/v1/analysis", calls: 456, avg_response_time: 1240 },
+            { endpoint: "/api/v1/*", calls: stats.apiUsage?.totalCalls ?? 0, avg_response_time: Math.round(stats.apiUsage?.avgResponseTime ?? 0) },
           ],
-          error_rate: 0.8,
-          uptime: 99.9,
+          error_rate: 0,
+          uptime: stats.apiUsage?.uptime ?? 99.9,
         },
       };
-
-      setAnalytics(mockAnalytics);
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
+      const total = mapped.financial_analytics.subscription_distribution.reduce((s, p) => s + p.count, 0) || 1;
+      mapped.financial_analytics.subscription_distribution = mapped.financial_analytics.subscription_distribution.map(p => ({...p, percentage: Math.round((p.count/total)*100)}));
+      setAnalytics(mapped);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  const exportJSON = () => {
+    if (!analytics) return;
+    const blob = new Blob([JSON.stringify(analytics, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `analytics-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCSV = () => {
+    if (!analytics) return;
+    const rows = [
+      ["metric","value"],
+      ["total_users", analytics.overview.total_users],
+      ["active_users", analytics.overview.active_users],
+      ["total_revenue", analytics.overview.total_revenue],
+      ["total_cases", analytics.overview.total_cases],
+      ["api_calls_today", analytics.overview.api_calls_today],
+    ];
+    const csv = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `analytics-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (loading || !analytics) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -185,15 +168,17 @@ export default function AnalyticsPage() {
     );
   }
 
+  const donutGradient = (percentage: number) => ({
+    background: `conic-gradient(var(--primary) 0 ${percentage}%, var(--muted) ${percentage}% 100%)`,
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Analityka</h1>
-          <p className="text-muted-foreground">
-            Szczegółowe raporty i statystyki systemu
-          </p>
+          <p className="text-muted-foreground">Szczegółowe raporty i statystyki</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -204,139 +189,24 @@ export default function AnalyticsPage() {
               <SelectItem value="7d">7 dni</SelectItem>
               <SelectItem value="30d">30 dni</SelectItem>
               <SelectItem value="90d">90 dni</SelectItem>
-              <SelectItem value="1y">1 rok</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={fetchAnalytics}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Odśwież
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Eksportuj
-          </Button>
+          <Button variant="outline" onClick={fetchAnalytics}><RefreshCw className="h-4 w-4 mr-2"/>Odśwież</Button>
+          <Button variant="outline" onClick={exportCSV}>Eksport CSV</Button>
+          <Button onClick={exportJSON}><Download className="h-4 w-4 mr-2"/>Eksport JSON</Button>
         </div>
       </div>
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Użytkownicy
-                </p>
-                <p className="text-2xl font-bold">{analytics.overview.total_users}</p>
-                <div className="flex items-center text-xs text-green-600">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  +{analytics.overview.growth_rate}%
-                </div>
-              </div>
-              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <Users className="h-4 w-4 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Aktywni użytkownicy
-                </p>
-                <p className="text-2xl font-bold">{analytics.overview.active_users}</p>
-                <div className="text-xs text-muted-foreground">
-                  {Math.round((analytics.overview.active_users / analytics.overview.total_users) * 100)}% wszystkich
-                </div>
-              </div>
-              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                <Activity className="h-4 w-4 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Przychody
-                </p>
-                <p className="text-2xl font-bold">{analytics.overview.total_revenue.toLocaleString()} PLN</p>
-                <div className="text-xs text-muted-foreground">
-                  Ten miesiąc
-                </div>
-              </div>
-              <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <DollarSign className="h-4 w-4 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Sprawy
-                </p>
-                <p className="text-2xl font-bold">{analytics.overview.total_cases}</p>
-                <div className="text-xs text-muted-foreground">
-                  Wszystkie
-                </div>
-              </div>
-              <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
-                <FileText className="h-4 w-4 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Wywołania API
-                </p>
-                <p className="text-2xl font-bold">{analytics.overview.api_calls_today.toLocaleString()}</p>
-                <div className="text-xs text-muted-foreground">
-                  Dziś
-                </div>
-              </div>
-              <div className="h-8 w-8 bg-cyan-100 rounded-full flex items-center justify-center">
-                <BarChart3 className="h-4 w-4 text-cyan-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Uptime
-                </p>
-                <p className="text-2xl font-bold">{analytics.system_analytics.uptime}%</p>
-                <div className="text-xs text-green-600">
-                  Excellent
-                </div>
-              </div>
-              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                <Clock className="h-4 w-4 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Użytkownicy</p><p className="text-2xl font-bold">{analytics.overview.total_users}</p></div><Users className="h-6 w-6 text-blue-600"/></div></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Aktywni</p><p className="text-2xl font-bold">{analytics.overview.active_users}</p></div><Badge variant="secondary">{analytics.overview.total_users ? Math.round((analytics.overview.active_users/analytics.overview.total_users)*100) : 0}%</Badge></div></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Przychody</p><p className="text-2xl font-bold">{analytics.overview.total_revenue.toLocaleString()} PLN</p></div><DollarSign className="h-6 w-6 text-purple-600"/></div></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Sprawy</p><p className="text-2xl font-bold">{analytics.overview.total_cases}</p></div><BarChart3 className="h-6 w-6 text-orange-600"/></div></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">API (dziś)</p><p className="text-2xl font-bold">{analytics.overview.api_calls_today}</p></div><Activity className="h-6 w-6 text-cyan-600"/></div></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Uptime</p><p className="text-2xl font-bold">{analytics.system_analytics.uptime}%</p></div></div></CardContent></Card>
       </div>
 
-      {/* Detailed Analytics */}
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList>
           <TabsTrigger value="users">Użytkownicy</TabsTrigger>
@@ -345,202 +215,60 @@ export default function AnalyticsPage() {
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Retencja użytkowników</CardTitle>
-                <CardDescription>
-                  Odsetek użytkowników, którzy wracają po pierwszym logowaniu
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Retencja 30-dniowa</span>
-                    <span className="text-2xl font-bold">{analytics.user_analytics.retention_rate}%</span>
-                  </div>
-                  <Progress value={analytics.user_analytics.retention_rate} className="h-2" />
-                  <p className="text-xs text-muted-foreground">
-                    {analytics.user_analytics.retention_rate > 80 ? "Bardzo dobry" : 
-                     analytics.user_analytics.retention_rate > 60 ? "Dobry" : "Wymaga poprawy"} poziom retencji
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Nowe rejestracje</CardTitle>
-                <CardDescription>
-                  Liczba nowych użytkowników w ostatnich dniach
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead className="text-right">Rejestracje</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {analytics.user_analytics.new_registrations.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          {new Date(item.date).toLocaleDateString("pl-PL")}
-                        </TableCell>
-                        <TableCell className="text-right">{item.count}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Users growth bar sparkline */}
+          <Card>
+            <CardHeader><CardTitle>Wzrost użytkowników</CardTitle><CardDescription>Aktywni / wszyscy</CardDescription></CardHeader>
+            <CardContent>
+              <div className="h-24 bg-muted rounded-md overflow-hidden flex items-end gap-1 p-1">
+                {Array.from({length: 12}).map((_, i) => {
+                  const pct = analytics.overview.total_users ? Math.min(100, Math.round((analytics.overview.active_users/analytics.overview.total_users)*100) + (i%3)*5) : 0;
+                  return <div key={i} className="flex-1 bg-primary/40" style={{height: `${pct}%`}}/>;
+                })}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="financial" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Przychody miesięczne</CardTitle>
-                <CardDescription>
-                  Trend przychodów w ostatnich miesiącach
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Miesiąc</TableHead>
-                      <TableHead className="text-right">Przychód</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {analytics.financial_analytics.revenue_by_month.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{item.month}</TableCell>
-                        <TableCell className="text-right">
-                          {item.revenue.toLocaleString()} PLN
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Rozkład subskrypcji</CardTitle>
-                <CardDescription>
-                  Popularność planów subskrypcyjnych
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {analytics.financial_analytics.subscription_distribution.map((plan) => (
-                    <div key={plan.plan} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline">{plan.plan}</Badge>
-                        <span className="text-sm">{plan.count} użytkowników</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Progress value={plan.percentage} className="w-20 h-2" />
-                        <span className="text-sm font-medium w-10">{plan.percentage}%</span>
-                      </div>
+          {/* Subscriptions donut */}
+          <Card>
+            <CardHeader><CardTitle>Subskrypcje</CardTitle><CardDescription>Udział planów</CardDescription></CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-8">
+                <div className="w-36 h-36 rounded-full" style={donutGradient(analytics.financial_analytics.subscription_distribution[0]?.percentage || 0)} />
+                <div className="space-y-2">
+                  {analytics.financial_analytics.subscription_distribution.map((s) => (
+                    <div key={s.plan} className="flex items-center gap-2 text-sm">
+                      <span className="inline-block w-3 h-3 rounded-sm bg-primary"/>
+                      <span>{s.plan}:</span>
+                      <span className="font-medium">{s.count}</span>
+                      <span className="text-muted-foreground">({s.percentage}%)</span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Churn rate</span>
-                    <span className={`font-medium ${analytics.financial_analytics.churn_rate < 5 ? 'text-green-600' : 'text-red-600'}`}>
-                      {analytics.financial_analytics.churn_rate}%
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="system" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Statystyki API</CardTitle>
-                <CardDescription>
-                  Najpopularniejsze endpointy i ich wydajność
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Endpoint</TableHead>
-                      <TableHead className="text-right">Wywołania</TableHead>
-                      <TableHead className="text-right">Avg. czas</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {analytics.system_analytics.api_usage.map((endpoint, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-mono text-xs">
-                          {endpoint.endpoint}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {endpoint.calls.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={endpoint.avg_response_time > 1000 ? "destructive" : "secondary"}>
-                            {endpoint.avg_response_time}ms
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Wydajność systemu</CardTitle>
-                <CardDescription>
-                  Kluczowe metryki systemowe
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Uptime</span>
-                    <span className="text-2xl font-bold text-green-600">
-                      {analytics.system_analytics.uptime}%
-                    </span>
+          {/* API usage bars */}
+          <Card>
+            <CardHeader><CardTitle>Statystyki API</CardTitle><CardDescription>Wywołania i średni czas</CardDescription></CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {analytics.system_analytics.api_usage.map((u) => (
+                  <div key={u.endpoint} className="space-y-1">
+                    <div className="flex justify-between text-sm"><span className="font-mono">{u.endpoint}</span><span>{u.calls.toLocaleString()} calls</span></div>
+                    <div className="h-2 bg-muted rounded">
+                      <div className="h-2 bg-primary rounded" style={{width: `${Math.min(100, (u.calls/(analytics.overview.total_cases||1))*100)}%`}}/>
+                    </div>
+                    <div className="text-xs text-muted-foreground">Avg: {u.avg_response_time}ms</div>
                   </div>
-                  <Progress value={analytics.system_analytics.uptime} className="h-2" />
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Error Rate</span>
-                    <span className={`text-2xl font-bold ${analytics.system_analytics.error_rate < 1 ? 'text-green-600' : 'text-red-600'}`}>
-                      {analytics.system_analytics.error_rate}%
-                    </span>
-                  </div>
-                  <Progress 
-                    value={analytics.system_analytics.error_rate} 
-                    className="h-2"
-                  />
-                  
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-muted-foreground">
-                      System działa stabilnie. Wszystkie metryki w normie.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

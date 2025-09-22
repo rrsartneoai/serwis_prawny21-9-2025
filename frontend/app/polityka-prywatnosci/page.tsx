@@ -1,7 +1,5 @@
 "use client";
 
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -113,7 +111,7 @@ export default function PolitykaPrywatnosciPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-montserrat">
-      <Header />
+      {/* Header removed (rendered by global layout) */}
 
       <main className="flex-1">
         {/* Hero Section */}
@@ -245,7 +243,7 @@ export default function PolitykaPrywatnosciPage() {
         </section>
       </main>
 
-      <Footer />
+      {/* Footer removed (rendered by global layout) */}
     </div>
   );
 }

@@ -81,7 +81,7 @@ export default function PlatnoscPage() {
       const appliedPromoCode = localStorage.getItem('appliedPromoCode');
       
       const paymentResult = await paymentsApi.createPayment({
-        case_id: caseData.id,
+        case_id: Number(caseData.id),
         amount: parseFloat(amount),
         payment_type: 'analysis',
         provider: paymentMethod,

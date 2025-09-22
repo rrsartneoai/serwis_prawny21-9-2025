@@ -54,6 +54,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Client {
   id: number;
@@ -117,6 +118,17 @@ export default function OperatorClientsPage() {
   const [showClientDetails, setShowClientDetails] = useState(false);
   const [showAddNote, setShowAddNote] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const [showCreateClient, setShowCreateClient] = useState(false);
+  const [newClient, setNewClient] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    preferred_contact: "EMAIL" as Client["preferred_contact"],
+    notes: "",
+    rodo: false,
+    confidentiality: false,
+  });
 
   useEffect(() => {
     fetchClients();
@@ -276,6 +288,45 @@ export default function OperatorClientsPage() {
     }
   };
 
+  const handleCreateClient = async () => {
+    if (!newClient.first_name || !newClient.last_name || !newClient.email) {
+      toast.error("Uzupełnij imię, nazwisko i email");
+      return;
+    }
+    if (!newClient.rodo || !newClient.confidentiality) {
+      toast.error("Wymagana zgoda RODO i klauzuli poufności");
+      return;
+    }
+    const created: Client = {
+      id: Date.now(),
+      first_name: newClient.first_name,
+      last_name: newClient.last_name,
+      email: newClient.email,
+      phone: newClient.phone || undefined,
+      status: "ACTIVE",
+      created_at: new Date().toISOString(),
+      last_contact: undefined,
+      cases_count: 0,
+      satisfaction_rating: undefined,
+      notes: newClient.notes || undefined,
+      total_spent: 0,
+      preferred_contact: newClient.preferred_contact,
+    };
+    setClients([created, ...clients]);
+    setShowCreateClient(false);
+    setNewClient({
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone: "",
+      preferred_contact: "EMAIL",
+      notes: "",
+      rodo: false,
+      confidentiality: false,
+    });
+    toast.success("Klient został dodany");
+  };
+
   const filteredClients = clients.filter((client) => {
     const fullName = `${client.first_name} ${client.last_name}`.toLowerCase();
     const matchesSearch =
@@ -320,10 +371,13 @@ export default function OperatorClientsPage() {
             Zarządzaj kontaktami z klientami i ich sprawami
           </p>
         </div>
-        <Button variant="outline" onClick={fetchClients}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Odśwież
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchClients}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Odśwież
+          </Button>
+          <Button onClick={() => setShowCreateClient(true)}>Dodaj nowego klienta</Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -725,6 +779,104 @@ export default function OperatorClientsPage() {
             <Button onClick={handleAddNote} disabled={!newNote.trim()}>
               Dodaj notatkę
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Client Dialog */}
+      <Dialog open={showCreateClient} onOpenChange={setShowCreateClient}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Dodaj nowego klienta</DialogTitle>
+            <DialogDescription>
+              Wypełnij dane klienta. Zgody RODO i klauzuli poufności są wymagane.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Imię</Label>
+              <Input
+                value={newClient.first_name}
+                onChange={(e) => setNewClient({ ...newClient, first_name: e.target.value })}
+                placeholder="Jan"
+              />
+            </div>
+            <div>
+              <Label>Nazwisko</Label>
+              <Input
+                value={newClient.last_name}
+                onChange={(e) => setNewClient({ ...newClient, last_name: e.target.value })}
+                placeholder="Kowalski"
+              />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={newClient.email}
+                onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                placeholder="jan.kowalski@email.com"
+              />
+            </div>
+            <div>
+              <Label>Telefon</Label>
+              <Input
+                value={newClient.phone}
+                onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                placeholder="+48 123 456 789"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label>Preferowana forma kontaktu</Label>
+              <Select
+                value={newClient.preferred_contact}
+                onValueChange={(v: Client["preferred_contact"]) => setNewClient({ ...newClient, preferred_contact: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EMAIL">Email</SelectItem>
+                  <SelectItem value="PHONE">Telefon</SelectItem>
+                  <SelectItem value="SMS">SMS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="md:col-span-2">
+              <Label>Notatki</Label>
+              <Textarea
+                rows={4}
+                value={newClient.notes}
+                onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })}
+                placeholder="Dodatkowe informacje o kliencie..."
+              />
+            </div>
+            <div className="md:col-span-2 space-y-3">
+              <label className="flex items-start gap-3 text-sm">
+                <Checkbox
+                  checked={newClient.rodo}
+                  onCheckedChange={(c) => setNewClient({ ...newClient, rodo: Boolean(c) })}
+                />
+                <span>
+                  Wyrażam zgodę na przetwarzanie moich danych osobowych zgodnie z RODO w celu obsługi zapytania i realizacji usług.
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm">
+                <Checkbox
+                  checked={newClient.confidentiality}
+                  onCheckedChange={(c) => setNewClient({ ...newClient, confidentiality: Boolean(c) })}
+                />
+                <span>
+                  Oświadczam, że zapoznałem się z klauzulą poufności i akceptuję zasady przetwarzania oraz ochrony przekazanych informacji.
+                </span>
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateClient(false)}>
+              Anuluj
+            </Button>
+            <Button onClick={handleCreateClient}>Zapisz klienta</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

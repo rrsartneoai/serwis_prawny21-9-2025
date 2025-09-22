@@ -23,10 +23,21 @@ export default function RejestracjaPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Register form submitted");
     setIsLoading(true);
 
-    const { user, error } = await signUpWithEmail(email, password, name);
+    const [firstName, lastName] = (() => {
+      const parts = name.trim().split(" ");
+      if (parts.length === 0) return ["", ""] as const;
+      if (parts.length === 1) return [parts[0], ""] as const;
+      return [parts[0], parts.slice(1).join(" ")] as const;
+    })();
+
+    const { user, error, requiresVerification, verificationSentTo } = await signUpWithEmail(
+      email,
+      password,
+      firstName,
+      lastName,
+    );
 
     if (error) {
       toast({
@@ -34,14 +45,30 @@ export default function RejestracjaPage() {
         description: error,
         variant: "destructive",
       });
-    } else if (user) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (requiresVerification) {
+      toast({
+        title: "Sprawdź skrzynkę pocztową",
+        description: `Wysłaliśmy kod weryfikacyjny na: ${verificationSentTo}`,
+      });
+      setIsLoading(false);
+      router.push("/logowanie");
+      return;
+    }
+
+    if (user) {
       toast({
         title: "Rejestracja pomyślna!",
-        description:
-          "Twoje konto zostało utworzone. Sprawdź swoją skrzynkę pocztową, aby potwierdzić adres email.",
+        description: "Konto zostało utworzone.",
       });
-      router.push("/panel-klienta"); // Redirect to client panel after successful registration
+      setIsLoading(false);
+      router.push("/panel-klienta");
+      return;
     }
+
     setIsLoading(false);
   };
 

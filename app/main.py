@@ -32,9 +32,10 @@ app.add_middleware(
 )
 
 from app.api.v1.endpoints import kancelarie, users, cases, auth, payments, operator, notifications, documents, admin, messages
+from app.api.v1.endpoints import templates as templates_endpoint
+from app.api.v1.endpoints import analysis as analysis_endpoint
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
 app.include_router(kancelarie.router, prefix="/api/v1/kancelarie", tags=["kancelarie"])
-app.include_router(kancelarie.router, prefix="/api/v1/law-firms", tags=["law-firms"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(cases.router, prefix="/api/v1/cases", tags=["cases"])
 app.include_router(payments.router, prefix="/api/v1/payments", tags=["payments"])
@@ -43,6 +44,8 @@ app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(messages.router, prefix="/api/v1/messages", tags=["messages"])
+app.include_router(templates_endpoint.router, prefix="/api/v1/templates", tags=["templates"])
+app.include_router(analysis_endpoint.router, prefix="/api/v1/analysis", tags=["analysis"])
 
 @app.get("/")
 async def root():

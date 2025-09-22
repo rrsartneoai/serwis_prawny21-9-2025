@@ -1,7 +1,5 @@
 "use client";
 
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, FileText, CheckCircle, Phone } from "lucide-react";
@@ -79,7 +77,7 @@ export default function RegulaminPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-montserrat">
-      <Header />
+      {/* Header removed (rendered by global layout) */}
 
       <main className="flex-1">
         {/* Hero Section */}
@@ -186,7 +184,7 @@ export default function RegulaminPage() {
         </section>
       </main>
 
-      <Footer />
+      {/* Footer removed (rendered by global layout) */}
     </div>
   );
 }
