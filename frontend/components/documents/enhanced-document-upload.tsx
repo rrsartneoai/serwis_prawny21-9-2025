@@ -25,6 +25,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { documentsApi, DocumentResponse, FileUploadLimits } from "@/lib/api/documents";
+import VoiceRecorder from "@/components/voice/voice-recorder";
 
 interface EnhancedDocumentUploadProps {
   caseId?: number;
@@ -54,9 +55,6 @@ export default function EnhancedDocumentUpload({
   const [dragActive, setDragActive] = useState(false);
   const [limits, setLimits] = useState<FileUploadLimits | null>(null);
   const [showCamera, setShowCamera] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   
   // Case creation form data
@@ -244,71 +242,6 @@ export default function EnhancedDocumentUpload({
     setShowCamera(false);
   };
 
-  // Voice recording functionality
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        setAudioUrl(audioUrl);
-        transcribeAudio(audioBlob);
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      toast({
-        title: "Błąd nagrywania",
-        description: "Nie można uzyskać dostępu do mikrofonu. Sprawdź uprawnienia.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      setIsRecording(false);
-    }
-  };
-
-  const transcribeAudio = async (audioBlob: Blob) => {
-    setIsTranscribing(true);
-    try {
-      // Here you would integrate with a speech-to-text service
-      // For now, we'll simulate transcription
-      setTimeout(() => {
-        const simulatedTranscription = "To jest przykładowa transkrypcja nagrania głosowego użytkownika.";
-        setCaseData(prev => ({
-          ...prev,
-          voiceTranscription: simulatedTranscription,
-          userExpectation: prev.userExpectation + (prev.userExpectation ? ' ' : '') + simulatedTranscription
-        }));
-        setIsTranscribing(false);
-        toast({
-          title: "Transkrypcja ukończona",
-          description: "Nagranie zostało przetworzone na tekst.",
-        });
-      }, 2000);
-    } catch (error) {
-      setIsTranscribing(false);
-      toast({
-        title: "Błąd transkrypcji",
-        description: "Nie można przetworzyć nagrania na tekst.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleUpload = async () => {
     if (files.length === 0) {
@@ -635,56 +568,19 @@ export default function EnhancedDocumentUpload({
         </div>
 
         {/* Voice Recording */}
-        <div className="border rounded-lg p-4">
-          <Label className="text-base font-medium mb-3 block">
-            Opcjonalnie: Nagraj opis głosowo (max 2 minuty)
-          </Label>
-          
-          <div className="flex items-center gap-3">
-            {!isRecording ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={startRecording}
-                disabled={isTranscribing}
-                className="flex items-center gap-2"
-              >
-                <Mic className="h-4 w-4" />
-                Rozpocznij nagrywanie
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={stopRecording}
-                className="flex items-center gap-2"
-              >
-                <Square className="h-4 w-4" />
-                Zakończ nagrywanie
-              </Button>
-            )}
-
-            {isTranscribing && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Przetwarzanie nagrania...
-              </div>
-            )}
-          </div>
-
-          {audioUrl && (
-            <div className="mt-3">
-              <audio controls src={audioUrl} className="w-full" />
-            </div>
-          )}
-
-          {caseData.voiceTranscription && (
-            <div className="mt-3 p-3 bg-muted rounded">
-              <Label className="text-sm font-medium">Transkrypcja:</Label>
-              <p className="text-sm mt-1">{caseData.voiceTranscription}</p>
-            </div>
-          )}
-        </div>
+        <VoiceRecorder
+          onTranscriptionComplete={(transcription, audioBlob) => {
+            setCaseData(prev => ({
+              ...prev,
+              voiceTranscription: transcription,
+              userExpectation: prev.userExpectation + (prev.userExpectation ? '\n\n' : '') + 
+                'Opis głosowy: ' + transcription
+            }));
+          }}
+          maxDuration={120} // 2 minutes
+          className="border-0 shadow-none"
+          showTranscription={true}
+        />
       </div>
 
       <Button
