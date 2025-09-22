@@ -6,7 +6,8 @@ MAX_FILES_PER_CASE = 10
 ALLOWED_FILE_TYPES = ["pdf", "jpg", "jpeg", "png", "doc", "docx"]
 
 # Database settings
-DATABASE_URL = "sqlite:///./test.db"
+import os
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
 
 # JWT settings
 SECRET_KEY = "your-secret-key-here"

@@ -27,7 +27,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5000",
-        f"https://{os.getenv('REPLIT_DEV_DOMAIN', 'localhost')}"
+        "https://localhost:5000",
+        f"https://{os.getenv('REPLIT_DEV_DOMAIN', 'localhost')}",
+        f"http://{os.getenv('REPLIT_DEV_DOMAIN', 'localhost')}",
+        "*"  # Allow all origins in development for Replit proxy
     ],  # Secure origins for Replit environment
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
