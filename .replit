@@ -67,5 +67,5 @@ externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["bash", "-c", "cd frontend && npm start & python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"]
-build = ["cd", "frontend", "&&", "npm", "run", "build"]
+run = ["npm", "run", "start", "--prefix", "frontend"]
+build = ["npm", "run", "build", "--prefix", "frontend"]
