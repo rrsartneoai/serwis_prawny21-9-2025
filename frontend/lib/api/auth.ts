@@ -118,7 +118,37 @@ export class AuthAPIClient {
   // Email/Password Authentication
   async register(email: string, password: string, firstName?: string, lastName?: string): Promise<ApiResponse<AuthResponse>> {
     try {
-      const tokenResponse = await this.makeRequest<any>('POST', '/users/register', {
+      const tokenResponse = await this.makeRequest<AuthResponse>('POST', '/auth/register', {
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+        auth_provider: 'email'
+      });
+      
+      if (tokenResponse.access_token) {
+        this.token = tokenResponse.access_token;
+        // Store token in localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth-token', tokenResponse.access_token);
+        }
+        
+        // Backend returns complete AuthResponse
+        return { data: tokenResponse, error: null };
+      }
+      
+      return { data: null, error: 'Registration failed' };
+    } catch (error) {
+      return { 
+        data: null, 
+        error: error instanceof Error ? error.message : 'Registration failed' 
+      };
+    }
+  }
+
+  async login(email: string, password: string): Promise<ApiResponse<AuthResponse>> {
+    try {
+      const tokenResponse = await this.makeRequest<AuthResponse>('POST', '/auth/login', {
         email,
         password
       });
@@ -130,56 +160,11 @@ export class AuthAPIClient {
           localStorage.setItem('auth-token', tokenResponse.access_token);
         }
         
-        // Get user info with the token
-        const userResponse = await this.getCurrentUser();
-        if (userResponse.data) {
-          const authResponse = {
-            user: userResponse.data,
-            access_token: tokenResponse.access_token,
-            requires_verification: false
-          };
-          return { data: authResponse, error: null };
-        }
+        // Backend returns complete AuthResponse
+        return { data: tokenResponse, error: null };
       }
       
-      return { data: null, error: 'Registration successful but failed to get user info' };
-    } catch (error) {
-      return { 
-        data: null, 
-        error: error instanceof Error ? error.message : 'Registration failed' 
-      };
-    }
-  }
-
-  async login(email: string, password: string): Promise<ApiResponse<AuthResponse>> {
-    try {
-      // FastAPI OAuth2PasswordRequestForm expects form data with username/password
-      const formData = new FormData();
-      formData.append('username', email); 
-      formData.append('password', password);
-      
-      const tokenResponse = await this.makeRequest<any>('POST', '/users/token', formData);
-      
-      if (tokenResponse.access_token) {
-        this.token = tokenResponse.access_token;
-        // Store token in localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('auth-token', tokenResponse.access_token);
-        }
-        
-        // Get user info with the token
-        const userResponse = await this.getCurrentUser();
-        if (userResponse.data) {
-          const authResponse = {
-            user: userResponse.data,
-            access_token: tokenResponse.access_token,
-            requires_verification: false
-          };
-          return { data: authResponse, error: null };
-        }
-      }
-      
-      return { data: null, error: 'Login successful but failed to get user info' };
+      return { data: null, error: 'Login failed' };
     } catch (error) {
       return { 
         data: null, 
@@ -289,7 +274,7 @@ export class AuthAPIClient {
     }
 
     try {
-      const user = await this.makeRequest<User>('GET', '/users/me', null, true);
+      const user = await this.makeRequest<User>('GET', '/auth/me', null, true);
       return { data: user, error: null };
     } catch (error) {
       return { 
